@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Municípios{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1 id="hero-title">Municípios do Brasil — α₁ multa ambiental evitada (valor esperado por auto)</h1>
+  <p id="hero-desc">Malha IBGE 2022 (5.570 municípios) · 443 costeiros pintados pelo estimador α̂₁, valor esperado de multa IBAMA-óleo por auto, calculado como média geométrica do histórico do próprio município (via=muni) ou fallback hierárquico (setor PNGC + perfil de infra → setor PNGC). Universo de autos: filtro estrito Lei 9966/00 arts 15-17 ou Dec 4136/02 arts 29-45 (201 autos, SIFISC 2005-2026).</p>
+</section>
+
+<section class="map-wrap">
+  <div id="map"></div>
+  <aside class="legend">
+    <h3>Filtros</h3>
+    <div class="filter-row">
+      <label for="f-camada">Contribuição</label>
+      <select id="f-camada">
+        <option value="soma">Σα (todas somadas)</option>
+        <option value="a1" selected>α₁ — multa IBAMA evitada</option>
+        <option value="a2">α₂ — pesca</option>
+        <option value="a3">α₃ — turismo</option>
+        <option value="a4">α₄ — saúde</option>
+        <option value="a5">α₅ — ecossistemas</option>
+      </select>
+    </div>
+    <div class="filter-row">
+      <label><input type="checkbox" id="f-costeiros" checked> apenas costeiros</label>
+    </div>
+    <div class="filter-row">
+      <label for="f-regiao">Região</label>
+      <select id="f-regiao"><option value="">Todas</option></select>
+    </div>
+    <div class="filter-row">
+      <label for="f-uf">UF</label>
+      <select id="f-uf"><option value="">Todas</option></select>
+    </div>
+    <div class="filter-row">
+      <label for="f-mun">Município</label>
+      <select id="f-mun"><option value="">Todos</option></select>
+    </div>
+    <div class="filter-row">
+      <button id="f-reset" type="button">limpar filtros</button>
+    </div>
+    <div id="f-scale" class="scale"></div>
+    <p class="note" id="f-count">carregando...</p>
+    <p class="note" id="f-total"></p>
+  </aside>
+</section>
+
+<section class="autos-section">
+  <div class="autos-head">
+    <h2 id="autos-title">Clique num município no mapa para ver detalhes</h2>
+    <span id="autos-sum" class="autos-sum"></span>
+  </div>
+  <div class="autos-scroll">
+    <table class="autos-table" id="autos-table">
+      <thead id="autos-thead">
+        <tr>
+          <th>Auto</th>
+          <th>Data</th>
+          <th class="num">Valor (R$)</th>
+          <th>Tipo</th>
+          <th>Descrição</th>
+          <th>Gravidade</th>
+          <th>Norma</th>
+          <th>Artigo</th>
+          <th>Tipo auto</th>
+          <th>Efeito ambiental</th>
+          <th>Via</th>
+        </tr>
+      </thead>
+      <tbody id="autos-tbody">
+        <tr><td colspan="11" class="autos-empty">nenhum município selecionado.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/mapa_municipios.js"></script>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Mapa{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Índice de Custo Socioambiental Evitado por Incidentes com Óleo no Mar</h1>
+  <p>Valor social potencial preservado pela atuação preventiva e forense da Laboratório de Geoquímica Ambiental Forense (LGAF) do IEAPM.</p>
+  <div class="kpis">
+    <div class="kpi"><span class="v">{{ stats.municipios }}</span><span class="l">municípios costeiros</span></div>
+    <div class="kpi"><span class="v">{{ stats.eventos }}</span><span class="l">eventos registrados</span></div>
+    <div class="kpi"><span class="v">R$ {{ "{:,.0f}".format(stats.total_evitado).replace(",", ".") }}</span><span class="l">ICSEIOM acumulado</span></div>
+  </div>
+</section>
+
+<section class="map-wrap">
+  <div id="map"></div>
+  <aside class="legend">
+    <h3>Legenda</h3>
+    <div class="legend-row"><span class="sw" style="background:#065A82"></span> valor Σα baixo</div>
+    <div class="legend-row"><span class="sw" style="background:#1C7293"></span> valor Σα médio</div>
+    <div class="legend-row"><span class="sw" style="background:#C8A13A"></span> valor Σα alto</div>
+    <div class="legend-row"><span class="sw evento"></span> evento registrado</div>
+    <p class="note">Cada círculo = município costeiro (Decreto 5.300/2004). Tamanho proporcional a Σα (α₁ + α₂ + α₃ + α₄ + α₅).</p>
+  </aside>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/map.js"></script>
+{% endblock %}

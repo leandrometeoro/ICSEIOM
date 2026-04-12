@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Evento {{ ev.id_evento }}{% endblock %}
+{% block content %}
+<section class="page">
+  <h1>Evento #{{ ev.id_evento }}</h1>
+  <p class="sub-ev">{{ ev.data_evento }} · ({{ "%.3f"|format(ev.lat) }}, {{ "%.3f"|format(ev.lon) }}) · raio {{ ev.raio_km }} km · {% if ev.foi_poluente %}<span class="tag poluente">poluente</span>{% else %}<span class="tag naopol">não poluente</span>{% endif %}</p>
+  {% if ev.descricao %}<p>{{ ev.descricao }}</p>{% endif %}
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Resultado</h3>
+      <table class="tbl">
+        <tr><th>α₁ multa ambiental{% if ev.foi_poluente %}{% if ev.multa_provisoria %} <span class="tag" style="background:#C8A13A; color:#fff; font-size:.7rem;">provisória</span>{% else %} <span class="tag" style="background:#065A82; color:#fff; font-size:.7rem;">definitiva</span>{% endif %}{% else %} <span class="tag" style="background:#1C7293; color:#fff; font-size:.7rem;">contrafactual</span>{% endif %}</th><td class="num">R$ {{ "{:,.2f}".format(ev.alpha1_rs or 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td></tr>
+        <tr><th>α₂ pesca</th><td class="num">R$ {{ "{:,.2f}".format(ev.alpha2_rs or 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td></tr>
+        <tr><th>α₃ turismo</th><td class="num">R$ {{ "{:,.2f}".format(ev.alpha3_rs or 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td></tr>
+        <tr><th>α₄ saúde</th><td class="num">R$ {{ "{:,.2f}".format(ev.alpha4_rs or 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td></tr>
+        <tr><th>α₅ ecossistemas</th><td class="num">R$ {{ "{:,.2f}".format(ev.alpha5_rs or 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td></tr>
+        <tr><th>β (rateio)</th><td class="num">R$ {{ "{:,.2f}".format(ev.beta_rs or 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td></tr>
+        <tr><th>χ (rateio)</th><td class="num">R$ {{ "{:,.2f}".format(ev.chi_rs or 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td></tr>
+        <tr><th>k aplicado</th><td class="num">{{ ev.k_aplicado }}</td></tr>
+        <tr class="total"><th>ICSEIOM</th><td class="num">R$ {{ "{:,.2f}".format(ev.icseiom_rs or 0).replace(",", "X").replace(".", ",").replace("X", ".") }}</td></tr>
+      </table>
+      {% if ev.foi_poluente and user %}
+      <form method="post" action="/admin/evento/{{ ev.id_evento }}/corrigir-multa" class="form" style="margin-top:1rem; padding-top:.8rem; border-top:1px solid #ddd;">
+        <strong>Corrigir valor da multa</strong>
+        <label>Valor aplicado (R$) <input type="number" step="0.01" name="valor_multa_rs" value="{{ "%.2f"|format(ev.valor_multa_rs or 0) }}" required></label>
+        <label>Status
+          <select name="provisoria">
+            <option value="nao" {% if not ev.multa_provisoria %}selected{% endif %}>definitiva</option>
+            <option value="sim" {% if ev.multa_provisoria %}selected{% endif %}>ainda provisória</option>
+          </select>
+        </label>
+        <button type="submit">Atualizar e recalcular</button>
+      </form>
+      {% endif %}
+    </div>
+    <div class="card">
+      <h3>Municípios impactados ({{ muns|length }})</h3>
+      <div id="minimap" data-lat="{{ ev.lat }}" data-lon="{{ ev.lon }}" data-raio="{{ ev.raio_km }}"></div>
+      <ul class="muni-list">
+        {% for m in muns %}
+        <li><strong>{{ m.nome }}</strong> <span class="uf">{{ m.uf }}</span> <span class="frac">frac {{ "%.2f"|format(m.fracao) }}</span></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+(function(){
+  const el = document.getElementById('minimap');
+  if(!el) return;
+  const lat = parseFloat(el.dataset.lat);
+  const lon = parseFloat(el.dataset.lon);
+  const raio = parseFloat(el.dataset.raio);
+  const m = L.map('minimap').setView([lat,lon], 8);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OSM · © Carto'}).addTo(m);
+  L.circle([lat,lon], {radius: raio*1000, color:'#C8A13A', fillColor:'#C8A13A', fillOpacity:0.2}).addTo(m);
+  L.marker([lat,lon]).addTo(m);
+  fetch('/api/municipios.geojson').then(r=>r.json()).then(gj=>{
+    L.geoJSON(gj,{pointToLayer:(f,ll)=>L.circleMarker(ll,{radius:4,color:'#065A82',fillOpacity:0.6})}).addTo(m);
+  });
+})();
+</script>
+{% endblock %}

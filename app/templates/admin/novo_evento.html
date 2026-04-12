@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Novo evento{% endblock %}
+{% block content %}
+<section class="page">
+  <h1>Registrar novo incidente</h1>
+  <p>Clique no mapa para definir lat/lon ou preencha manualmente. O raio desenha o círculo de influência.</p>
+  <div class="grid2">
+    <div>
+      <form method="post" action="/admin/novo-evento" class="form">
+        <label>Data do evento <input type="date" name="data_evento" required></label>
+        <label>Latitude <input type="number" step="any" name="lat" id="lat" required></label>
+        <label>Longitude <input type="number" step="any" name="lon" id="lon" required></label>
+        <label>Raio (km) <input type="number" step="any" name="raio_km" id="raio" value="25" required></label>
+        <label>Foi poluente?
+          <select name="foi_poluente" id="foi_poluente">
+            <option value="nao">não (incidente evitado / contido)</option>
+            <option value="sim">sim (derrame confirmado)</option>
+          </select>
+        </label>
+        <div id="bloco-multa" style="background:#f4f7fa; padding:.6rem .8rem; border-left:3px solid #C8A13A; border-radius:4px;">
+          <p id="explica-multa" style="font-size:.82rem; color:#444; margin:0 0 .5rem;"></p>
+          <label>Valor da multa α₁ (R$) <em style="font-weight:normal; color:#666;">— provisório, corrigível depois</em>
+            <input type="number" step="0.01" name="valor_multa_rs" id="valor_multa_rs" placeholder="deixe vazio para usar estimativa α̂₁">
+          </label>
+          <button type="button" id="btn-sugerir" style="font-size:.85rem; padding:.3rem .6rem; margin-top:.3rem;">Preencher com estimativa α̂₁</button>
+          <div id="sugestao-info" style="font-size:.82rem; color:#555; margin-top:.3rem;"></div>
+        </div>
+        <label>Descrição <textarea name="descricao" rows="3"></textarea></label>
+        <button type="submit">Calcular e registrar</button>
+      </form>
+    </div>
+    <div>
+      <div id="pick-map"></div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+(function(){
+  const m = L.map('pick-map').setView([-22.95, -42.02], 5);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OSM · © Carto'}).addTo(m);
+  let marker = null, circle = null;
+  function update(lat, lon){
+    const raio = parseFloat(document.getElementById('raio').value || 25);
+    if(marker){m.removeLayer(marker);} if(circle){m.removeLayer(circle);}
+    marker = L.marker([lat, lon]).addTo(m);
+    circle = L.circle([lat, lon], {radius: raio*1000, color:'#C8A13A', fillColor:'#C8A13A', fillOpacity:0.18}).addTo(m);
+    document.getElementById('lat').value = lat.toFixed(4);
+    document.getElementById('lon').value = lon.toFixed(4);
+  }
+  const selPol = document.getElementById('foi_poluente');
+  const explica = document.getElementById('explica-multa');
+  const btnSug = document.getElementById('btn-sugerir');
+  const inpMulta = document.getElementById('valor_multa_rs');
+  const infoSug = document.getElementById('sugestao-info');
+
+  function togglePol(){
+    if (selPol.value === 'sim') {
+      explica.innerHTML = '<strong>Derrame confirmado:</strong> a análise LGAF contribuiu para a aplicação da multa. Informe o valor real da multa aplicada (se conhecido) ou use a estimativa α̂₁ como chute provisório.';
+    } else {
+      explica.innerHTML = '<strong>Evento evitado/contido:</strong> a análise LGAF contribuiu para evitar autuação indevida. Se não informar valor, o sistema usa a estimativa α̂₁ (média geométrica histórica dos municípios no raio, ponderada por fração de impacto).';
+    }
+  }
+  selPol.addEventListener('change', togglePol); togglePol();
+
+  btnSug.addEventListener('click', () => {
+    const lat = parseFloat(document.getElementById('lat').value);
+    const lon = parseFloat(document.getElementById('lon').value);
+    const raio = parseFloat(document.getElementById('raio').value);
+    if(isNaN(lat) || isNaN(lon) || isNaN(raio)){ infoSug.textContent = 'Defina lat, lon e raio primeiro.'; return; }
+    infoSug.textContent = 'Calculando...';
+    fetch(`/api/sugerir-multa?lat=${lat}&lon=${lon}&raio_km=${raio}`)
+      .then(r=>r.json()).then(d=>{
+        inpMulta.value = d.valor_rs.toFixed(2);
+        infoSug.textContent = `Estimativa α̂₁: R$ ${d.valor_rs.toLocaleString('pt-BR', {maximumFractionDigits: 0})} (média geométrica dos municípios no raio, ponderada por fração de impacto).`;
+      }).catch(()=>{ infoSug.textContent = 'Erro ao buscar sugestão.'; });
+  });
+  m.on('click', e => update(e.latlng.lat, e.latlng.lng));
+  document.getElementById('raio').addEventListener('input', () => {
+    const lat = parseFloat(document.getElementById('lat').value);
+    const lon = parseFloat(document.getElementById('lon').value);
+    if(!isNaN(lat) && !isNaN(lon)) update(lat, lon);
+  });
+  fetch('/api/municipios.geojson').then(r=>r.json()).then(gj=>{
+    L.geoJSON(gj,{pointToLayer:(f,ll)=>L.circleMarker(ll,{radius:3,color:'#065A82',fillOpacity:0.5})}).addTo(m);
+  });
+})();
+</script>
+{% endblock %}

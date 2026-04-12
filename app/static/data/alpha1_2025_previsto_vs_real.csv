@@ -1,0 +1,41 @@
+seq_auto,municipio_uf,tipo_infracao,norma,tipo_multa,motivacao,efeito_meio_ambiente,passivel_recuperacao,valor_real_rs,valor_previsto_rs,erro_absoluto_rs,erro_pct
+2121962,Fortaleza/CE,Qualidade Ambiental,9966/00,Aberta,Intencional,Fraca,N,1034280.37,43951.7,-990328.67,-95.8
+2125380,Campos dos Goytacazes/RJ,Qualidade Ambiental,9966/00,Aberta,Intencional,Fraca,N,312428.54,67432.97,-244995.57,-78.4
+2121367,Fortaleza/CE,Qualidade Ambiental,9966/00,Aberta,Não intencional,Fraca,N,212195.92,27949.89,-184246.02,-86.8
+2125490,Campos dos Goytacazes/RJ,Licenciamento,9966/00,Aberta,Não intencional,Fraca,N,212195.92,59770.24,-152425.67,-71.8
+2126641,Campos dos Goytacazes/RJ,Qualidade Ambiental,9966/00,Aberta,Não intencional,Fraca,N,209452.09,43424.62,-166027.47,-79.3
+2121156,Fortaleza/CE,Qualidade Ambiental,9966/00,Aberta,Não intencional,Fraca,N,106097.96,27949.89,-78148.07,-73.7
+2125493,Campos dos Goytacazes/RJ,Qualidade Ambiental,9966/00,Aberta,Não intencional,Fraca,N,103696.95,49482.69,-54214.26,-52.3
+2121533,Fortaleza/CE,Qualidade Ambiental,9966/00,Aberta,Intencional,Fraca,N,103180.4,43951.7,-59228.7,-57.4
+2120900,Fortaleza/CE,Qualidade Ambiental,9966/00,Aberta,Intencional,Fraca,N,92280.6,54193.79,-38086.81,-41.3
+2125498,Campos dos Goytacazes/RJ,Qualidade Ambiental,9966/00,Aberta,Não intencional,Fraca,N,52071.42,49482.69,-2588.73,-5.0
+2125415,Campos dos Goytacazes/RJ,Qualidade Ambiental,9966/00,Aberta,Não intencional,Fraca,N,51848.48,49482.69,-2365.78,-4.6
+2125412,Campos dos Goytacazes/RJ,Qualidade Ambiental,9966/00,Aberta,Não intencional,Fraca,N,27585.47,48286.17,20700.7,75.0
+2125408,Campos dos Goytacazes/RJ,Qualidade Ambiental,9966/00,Aberta,Não intencional,Fraca,N,27228.77,43424.62,16195.85,59.5
+2125413,Campos dos Goytacazes/RJ,Qualidade Ambiental,9966/00,Aberta,Não intencional,Fraca,N,27228.77,43424.62,16195.85,59.5
+2125501,Campos dos Goytacazes/RJ,Qualidade Ambiental,9966/00,Aberta,Não intencional,Fraca,N,27228.77,47233.05,20004.28,73.5
+2126642,Campos dos Goytacazes/RJ,Qualidade Ambiental,9966/00,Aberta,Não intencional,Fraca,N,27077.14,45492.88,18415.74,68.0
+2125496,Campos dos Goytacazes/RJ,Qualidade Ambiental,9966/00,Aberta,Não intencional,Fraca,N,26961.21,49482.69,22521.49,83.5
+2125500,Campos dos Goytacazes/RJ,Qualidade Ambiental,9966/00,Aberta,Não intencional,Fraca,N,26961.21,49482.69,22521.49,83.5
+2125502,Campos dos Goytacazes/RJ,Qualidade Ambiental,9966/00,Aberta,Não intencional,Fraca,N,26891.29,49482.69,22591.4,84.0
+2121964,Fortaleza/CE,Qualidade Ambiental,9966/00,Aberta,Não intencional,Potencial,N,26826.91,14170.01,-12656.89,-47.2
+2126638,Campos dos Goytacazes/RJ,Qualidade Ambiental,9966/00,Aberta,Não intencional,Fraca,N,26826.91,45492.88,18665.97,69.6
+2126639,Marataízes/ES,Qualidade Ambiental,9966/00,Aberta,Não intencional,Fraca,N,26757.34,57485.96,30728.62,114.8
+2125477,Rio de Janeiro/RJ,Licenciamento,9966/00,Aberta,Não intencional,Desprezível,N,20945.21,37703.86,16758.66,80.0
+2122085,Fortaleza/CE,Qualidade Ambiental,9966/00,Aberta,Não intencional,Potencial,N,20739.39,8641.35,-12098.04,-58.3
+2122079,Fortaleza/CE,Qualidade Ambiental,9966/00,Aberta,Não intencional,Desprezível,N,15436.92,6869.75,-8567.17,-55.5
+2121567,Fortaleza/CE,Qualidade Ambiental,9966/00,Aberta,Não intencional,Desprezível,N,8378.08,5322.61,-3055.47,-36.5
+2126640,Campos dos Goytacazes/RJ,Qualidade Ambiental,9966/00,Aberta,Não intencional,Fraca,N,6283.56,43778.91,37495.35,596.7
+2125405,Campos dos Goytacazes/RJ,Qualidade Ambiental,9966/00,Aberta,Não intencional,Desprezível,N,5304.9,12133.0,6828.1,128.7
+2125397,Campos dos Goytacazes/RJ,Qualidade Ambiental,9966/00,Aberta,Não intencional,Desprezível,N,5207.14,16012.64,10805.5,207.5
+2122074,Fortaleza/CE,Qualidade Ambiental,9966/00,Aberta,Não intencional,Potencial,N,5184.85,14170.01,8985.17,173.3
+2121525,Fortaleza/CE,Qualidade Ambiental,9966/00,Aberta,Não intencional,Potencial,N,5171.4,14170.01,8998.61,174.0
+2122084,Fortaleza/CE,Qualidade Ambiental,9966/00,Aberta,Não intencional,Potencial,N,5171.4,14170.01,8998.61,174.0
+2125503,Campos dos Goytacazes/RJ,Qualidade Ambiental,9966/00,Aberta,Não intencional,Desprezível,N,5171.4,12753.12,7581.72,146.6
+2121524,Fortaleza/CE,Qualidade Ambiental,9966/00,Aberta,Não intencional,Potencial,N,5159.02,14170.01,9010.99,174.7
+2126635,Campos dos Goytacazes/RJ,Qualidade Ambiental,9966/00,Aberta,Não intencional,Desprezível,N,5159.02,12753.12,7594.1,147.2
+2126636,Campos dos Goytacazes/RJ,Qualidade Ambiental,9966/00,Aberta,Não intencional,Desprezível,N,5159.02,12753.12,7594.1,147.2
+2126637,Campos dos Goytacazes/RJ,Qualidade Ambiental,9966/00,Aberta,Não intencional,Desprezível,N,5159.02,12753.12,7594.1,147.2
+2121527,Fortaleza/CE,Qualidade Ambiental,9966/00,Aberta,Não intencional,Potencial,N,5145.64,11023.74,5878.1,114.2
+2121963,Fortaleza/CE,Qualidade Ambiental,9966/00,Aberta,Não intencional,Potencial,N,5145.64,16713.12,11567.48,224.8
+2122076,Fortaleza/CE,Qualidade Ambiental,9966/00,Aberta,Não intencional,Potencial,N,5145.64,16713.12,11567.48,224.8

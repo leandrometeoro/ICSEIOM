@@ -1,0 +1,58 @@
+{
+  "gerado_em": "2026-04-12T02:49:31",
+  "tipo": "mediana_por_estrato",
+  "unidade": "R$ corrigidos IPCA (mes-alvo via scripts/15)",
+  "mediana_global_rs": 143457.4113620435,
+  "estratos": [
+    {
+      "setor_pngc": 1,
+      "cluster_id": 0,
+      "n_obs": 1,
+      "mediana_log": 10.3218217238542,
+      "mediana_rs": 30388.56677889583
+    },
+    {
+      "setor_pngc": 2,
+      "cluster_id": 0,
+      "n_obs": 2,
+      "mediana_log": 13.168859905604162,
+      "mediana_rs": 523797.2210118307
+    },
+    {
+      "setor_pngc": 3,
+      "cluster_id": 1,
+      "n_obs": 19,
+      "mediana_log": 9.380288423453743,
+      "mediana_rs": 11852.432780840323
+    },
+    {
+      "setor_pngc": 3,
+      "cluster_id": 2,
+      "n_obs": 8,
+      "mediana_log": 9.472794044276146,
+      "mediana_rs": 13001.162353783127
+    },
+    {
+      "setor_pngc": 4,
+      "cluster_id": 0,
+      "n_obs": 146,
+      "mediana_log": 11.881278816793625,
+      "mediana_rs": 144535.26667531856
+    },
+    {
+      "setor_pngc": 4,
+      "cluster_id": 1,
+      "n_obs": 10,
+      "mediana_log": 11.898317407121926,
+      "mediana_rs": 147019.04381352887
+    },
+    {
+      "setor_pngc": 5,
+      "cluster_id": 2,
+      "n_obs": 3,
+      "mediana_log": 9.969415856012791,
+      "mediana_rs": 21363.00263539446
+    }
+  ],
+  "nota": "Modelos Ridge e LightGBM foram treinados para comparacao mas ambos underperformam o baseline no hold-out temporal porque os features agregados (porte, setor, cluster, infra) nao capturam os discriminadores reais da multa. Re-ingerir IBAMA preservando auto-nivel com tipo_infracao/norma/artigo e o proximo passo."
+}

@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Ambiente local
+.env
+
+# Banco SQLite (regeneravel via scripts/00_init_db.py + 01..33)
+db/*.db
+db/*.db-journal
+db/fontes/
+
+# Dados brutos pesados (baixados pelos scripts de ingestao)
+data/mapbiomas/*.xlsx
+data/mapbiomas/*.geojson
+data/mapbiomas/*.html
+data/**/*.zip
+data/**/*.csv
+
+# Caches/IDE
+.claude/
+.DS_Store
+.vscode/
+.idea/
+*.swp

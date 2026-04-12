@@ -1,0 +1,22 @@
+services:
+  icseiom:
+    build: .
+    image: icseiom-web:latest
+    container_name: icseiom-web
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      ICSEIOM_SECRET: ${ICSEIOM_SECRET:-please-change-me}
+      ICSEIOM_ADMIN_USER: ${ICSEIOM_ADMIN_USER:-admin}
+      ICSEIOM_ADMIN_PASSWORD: ${ICSEIOM_ADMIN_PASSWORD:-icseiom}
+      ICSEIOM_DB: /app/db/icseiom.db
+    volumes:
+      # Persistência do banco entre restarts
+      - ./db:/app/db
+      # Malha IBGE gerada pelos scripts 08/09 (persistida no host)
+      - ./app/static/data:/app/app/static/data
+      # Scripts montados para iteracao sem rebuild
+      - ./scripts:/app/scripts
+      # Codigo da app montado para hot-reload (main.py, templates, static)
+      - ./app:/app/app

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+{% block content %}
+<section class="page narrow">
+  <h1>Acesso administrativo</h1>
+  <p>Consultas públicas não exigem autenticação. O login é necessário apenas para cadastrar eventos ou atualizar fontes.</p>
+  {% if erro %}<p class="erro">Credenciais inválidas.</p>{% endif %}
+  <form method="post" action="/login" class="form">
+    <label>Usuário <input name="username" required autofocus></label>
+    <label>Senha <input type="password" name="password" required></label>
+    <button type="submit">Entrar</button>
+  </form>
+</section>
+{% endblock %}

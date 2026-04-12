@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Histórico de eventos{% endblock %}
+{% block content %}
+<section class="page">
+  <h1>Histórico de eventos</h1>
+  <p>Cada linha corresponde a um incidente registrado e processado pela LGAF.</p>
+  {% if eventos %}
+  <table class="tbl">
+    <thead>
+      <tr><th>ID</th><th>Data</th><th>Lat</th><th>Lon</th><th>Raio (km)</th><th>Poluente?</th><th>ICSEIOM (R$)</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for e in eventos %}
+      <tr>
+        <td>{{ e.id_evento }}</td>
+        <td>{{ e.data_evento }}</td>
+        <td>{{ "%.3f"|format(e.lat) }}</td>
+        <td>{{ "%.3f"|format(e.lon) }}</td>
+        <td>{{ e.raio_km }}</td>
+        <td>{{ "sim" if e.foi_poluente else "não" }}</td>
+        <td class="num">{% if e.icseiom_rs %}R$ {{ "{:,.2f}".format(e.icseiom_rs).replace(",", "X").replace(".", ",").replace("X", ".") }}{% else %}—{% endif %}</td>
+        <td><a href="/evento/{{ e.id_evento }}">ver</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">Nenhum evento registrado ainda.</p>
+  {% endif %}
+</section>
+{% endblock %}

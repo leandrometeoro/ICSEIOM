@@ -1,0 +1,432 @@
+{
+  "gerado_em": "2026-04-11T21:20:38",
+  "alvo_ipca": null,
+  "features": [
+    "log_pop",
+    "log_pib_pc",
+    "log_n_autos",
+    "log_mediana_multa"
+  ],
+  "setores": {
+    "1": {
+      "nome": "Norte",
+      "n_munis": 98,
+      "n_infra": 1,
+      "n_resto": 97,
+      "pca_n_componentes": 3,
+      "pca_variancia_explicada": [
+        0.4700862510841554,
+        0.2514642271176425,
+        0.1833436204159417,
+        0.09510590138226034
+      ],
+      "pca_loadings": [
+        [
+          0.55028838014933,
+          0.5110798827776915,
+          0.5773825805783619,
+          0.3203270324796805
+        ],
+        [
+          -0.27741343669665064,
+          0.27028541273635476,
+          -0.42791021101932547,
+          0.8166274744995343
+        ],
+        [
+          -0.576347617923007,
+          0.7182915050269485,
+          0.1193231845207404,
+          -0.37100231098528963
+        ]
+      ],
+      "k_otimo": 2,
+      "algoritmo_escolhido": "GMM",
+      "silhouette": 0.2844680113963943,
+      "davies_bouldin": 1.6674397812444206,
+      "tamanhos_cluster": {
+        "0": 1,
+        "2": 65,
+        "1": 32
+      },
+      "sweep": [
+        {
+          "k": 2,
+          "tipo": "GMM",
+          "silhouette": 0.2844680113963943,
+          "davies_bouldin": 1.6674397812444206,
+          "min_cluster": 32,
+          "valido": true
+        },
+        {
+          "k": 3,
+          "tipo": "GMM",
+          "silhouette": 0.19244714869109802,
+          "davies_bouldin": 1.478235399777465,
+          "min_cluster": 24,
+          "valido": true
+        },
+        {
+          "k": 4,
+          "tipo": "GMM",
+          "silhouette": 0.2256872661881314,
+          "davies_bouldin": 1.2263603371623597,
+          "min_cluster": 3,
+          "valido": false
+        },
+        {
+          "k": 5,
+          "tipo": "GMM",
+          "silhouette": 0.24897545891789424,
+          "davies_bouldin": 1.260194358239579,
+          "min_cluster": 13,
+          "valido": true
+        },
+        {
+          "k": 6,
+          "tipo": "GMM",
+          "silhouette": 0.19813642924228583,
+          "davies_bouldin": 1.1974230481559813,
+          "min_cluster": 3,
+          "valido": false
+        },
+        {
+          "k": 7,
+          "tipo": "GMM",
+          "silhouette": 0.24321208523826102,
+          "davies_bouldin": 1.5675291235067281,
+          "min_cluster": 3,
+          "valido": false
+        },
+        {
+          "k": 8,
+          "tipo": "GMM",
+          "silhouette": 0.23351218456215772,
+          "davies_bouldin": 1.5441687710176006,
+          "min_cluster": 3,
+          "valido": false
+        }
+      ]
+    },
+    "2": {
+      "nome": "Nordeste",
+      "n_munis": 191,
+      "n_infra": 7,
+      "n_resto": 184,
+      "pca_n_componentes": 3,
+      "pca_variancia_explicada": [
+        0.402160720005159,
+        0.2801256651128963,
+        0.21167727528533015,
+        0.10603633959661452
+      ],
+      "pca_loadings": [
+        [
+          0.6532953679026958,
+          0.28773407637079773,
+          0.6937745312077047,
+          -0.09534759262537619
+        ],
+        [
+          -0.0679055494076931,
+          0.6278391999712865,
+          -0.09061265763777741,
+          0.7700624141034759
+        ],
+        [
+          -0.3985063051747316,
+          0.6936172295036354,
+          0.005119178849285155,
+          -0.6000513791998097
+        ]
+      ],
+      "k_otimo": 2,
+      "algoritmo_escolhido": "GMM",
+      "silhouette": 0.22398224886755133,
+      "davies_bouldin": 1.755608675829121,
+      "tamanhos_cluster": {
+        "0": 7,
+        "2": 108,
+        "1": 76
+      },
+      "sweep": [
+        {
+          "k": 2,
+          "tipo": "GMM",
+          "silhouette": 0.22398224886755133,
+          "davies_bouldin": 1.755608675829121,
+          "min_cluster": 76,
+          "valido": true
+        },
+        {
+          "k": 3,
+          "tipo": "GMM",
+          "silhouette": 0.22037238521152602,
+          "davies_bouldin": 1.653717031481519,
+          "min_cluster": 22,
+          "valido": true
+        },
+        {
+          "k": 4,
+          "tipo": "GMM",
+          "silhouette": 0.21234429493357815,
+          "davies_bouldin": 1.269788854568985,
+          "min_cluster": 11,
+          "valido": false
+        },
+        {
+          "k": 5,
+          "tipo": "GMM",
+          "silhouette": 0.16974050560173495,
+          "davies_bouldin": 1.5471170748545675,
+          "min_cluster": 12,
+          "valido": false
+        },
+        {
+          "k": 6,
+          "tipo": "GMM",
+          "silhouette": 0.2174741101504057,
+          "davies_bouldin": 1.2358335455956861,
+          "min_cluster": 18,
+          "valido": true
+        },
+        {
+          "k": 7,
+          "tipo": "GMM",
+          "silhouette": 0.1010094184162548,
+          "davies_bouldin": 1.5025457725353983,
+          "min_cluster": 6,
+          "valido": false
+        },
+        {
+          "k": 8,
+          "tipo": "GMM",
+          "silhouette": 0.18117359681356254,
+          "davies_bouldin": 1.3409601597939873,
+          "min_cluster": 8,
+          "valido": false
+        }
+      ]
+    },
+    "3": {
+      "nome": "Leste",
+      "n_munis": 18,
+      "n_infra": 1,
+      "n_resto": 17,
+      "pca_n_componentes": 3,
+      "pca_variancia_explicada": [
+        0.4029273855518136,
+        0.29796374544384197,
+        0.211240801258021,
+        0.08786806774632346
+      ],
+      "pca_loadings": [
+        [
+          0.5915810264597263,
+          0.2402328943820013,
+          0.7044755197719821,
+          0.3098939941846219
+        ],
+        [
+          -0.4959335186463666,
+          0.7178484124201963,
+          -0.042459518210227455,
+          0.48676564297636404
+        ],
+        [
+          0.04007876372528014,
+          -0.5378202724353552,
+          -0.20909059171478342,
+          0.8157353564190872
+        ]
+      ],
+      "k_otimo": 2,
+      "algoritmo_escolhido": "KMeans",
+      "silhouette": 0.23680184330358411,
+      "davies_bouldin": 1.372531326288771,
+      "tamanhos_cluster": {
+        "0": 1,
+        "1": 9,
+        "2": 8
+      },
+      "sweep": [
+        {
+          "k": 2,
+          "tipo": "KMeans",
+          "silhouette": 0.23680184330358411,
+          "davies_bouldin": 1.372531326288771,
+          "min_cluster": 8,
+          "valido": true
+        }
+      ]
+    },
+    "4": {
+      "nome": "Sudeste",
+      "n_munis": 49,
+      "n_infra": 10,
+      "n_resto": 39,
+      "pca_n_componentes": 3,
+      "pca_variancia_explicada": [
+        0.37310346604844585,
+        0.3170816356243576,
+        0.22834324901443198,
+        0.08147164931276454
+      ],
+      "pca_loadings": [
+        [
+          -0.047114701306879406,
+          0.6646424899692982,
+          0.6637298455954731,
+          0.3398429895024824
+        ],
+        [
+          0.827240362922095,
+          -0.3898217610271128,
+          0.327231335337372,
+          0.23797485109893884
+        ],
+        [
+          -0.21273428177587847,
+          -0.16288172138427523,
+          -0.31770238333585676,
+          0.9095487154731804
+        ]
+      ],
+      "k_otimo": 2,
+      "algoritmo_escolhido": "GMM",
+      "silhouette": 0.17807905976281596,
+      "davies_bouldin": 1.8632871848595058,
+      "tamanhos_cluster": {
+        "0": 10,
+        "1": 25,
+        "2": 14
+      },
+      "sweep": [
+        {
+          "k": 2,
+          "tipo": "GMM",
+          "silhouette": 0.17807905976281596,
+          "davies_bouldin": 1.8632871848595058,
+          "min_cluster": 14,
+          "valido": true
+        },
+        {
+          "k": 3,
+          "tipo": "GMM",
+          "silhouette": 0.06468006557230775,
+          "davies_bouldin": 2.41774071919729,
+          "min_cluster": 4,
+          "valido": false
+        },
+        {
+          "k": 4,
+          "tipo": "GMM",
+          "silhouette": 0.10996507463428817,
+          "davies_bouldin": 2.157084938999803,
+          "min_cluster": 3,
+          "valido": false
+        }
+      ]
+    },
+    "5": {
+      "nome": "Sul",
+      "n_munis": 87,
+      "n_infra": 1,
+      "n_resto": 86,
+      "pca_n_componentes": 3,
+      "pca_variancia_explicada": [
+        0.4875526638603413,
+        0.21012385391457772,
+        0.19008351291228076,
+        0.11223996931280016
+      ],
+      "pca_loadings": [
+        [
+          0.5800398173341169,
+          0.43142201816417525,
+          0.570906535486198,
+          0.38922304696574783
+        ],
+        [
+          -0.11523451939633964,
+          -0.48398960797531004,
+          -0.10428930672447398,
+          0.8611613120747639
+        ],
+        [
+          -0.361765280103188,
+          0.760115251682139,
+          -0.42962458997426833,
+          0.3267619897746715
+        ]
+      ],
+      "k_otimo": 2,
+      "algoritmo_escolhido": "GMM",
+      "silhouette": 0.31324434841094595,
+      "davies_bouldin": 1.4419879029589662,
+      "tamanhos_cluster": {
+        "0": 1,
+        "1": 56,
+        "2": 30
+      },
+      "sweep": [
+        {
+          "k": 2,
+          "tipo": "GMM",
+          "silhouette": 0.31324434841094595,
+          "davies_bouldin": 1.4419879029589662,
+          "min_cluster": 30,
+          "valido": true
+        },
+        {
+          "k": 3,
+          "tipo": "GMM",
+          "silhouette": 0.2849897293870712,
+          "davies_bouldin": 1.2967502262489554,
+          "min_cluster": 9,
+          "valido": true
+        },
+        {
+          "k": 4,
+          "tipo": "GMM",
+          "silhouette": 0.15038200934164497,
+          "davies_bouldin": 1.3219103283180487,
+          "min_cluster": 3,
+          "valido": false
+        },
+        {
+          "k": 5,
+          "tipo": "GMM",
+          "silhouette": 0.13078333622004035,
+          "davies_bouldin": 1.4537904132611514,
+          "min_cluster": 3,
+          "valido": false
+        },
+        {
+          "k": 6,
+          "tipo": "GMM",
+          "silhouette": 0.15315547277600325,
+          "davies_bouldin": 1.3731801214686616,
+          "min_cluster": 3,
+          "valido": false
+        },
+        {
+          "k": 7,
+          "tipo": "GMM",
+          "silhouette": 0.12998731276855652,
+          "davies_bouldin": 1.118138056280548,
+          "min_cluster": 3,
+          "valido": false
+        },
+        {
+          "k": 8,
+          "tipo": "GMM",
+          "silhouette": 0.12234203291332238,
+          "davies_bouldin": 1.2648888802717293,
+          "min_cluster": 3,
+          "valido": false
+        }
+      ]
+    }
+  }
+}

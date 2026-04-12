@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Admin{% endblock %}
+{% block content %}
+<section class="page">
+  <h1>Painel administrativo</h1>
+  <div class="kpis">
+    <div class="kpi"><span class="v">{{ n_mun }}</span><span class="l">municípios</span></div>
+    <div class="kpi"><span class="v">{{ n_ev }}</span><span class="l">eventos</span></div>
+    <div class="kpi"><span class="v">R$ {{ "{:,.0f}".format(total).replace(",", ".") }}</span><span class="l">ICSEIOM acumulado</span></div>
+  </div>
+  <div class="actions">
+    <a class="btn" href="/admin/novo-evento">+ Novo evento</a>
+    <a class="btn" href="/admin/fontes">Fontes de dados</a>
+    <a class="btn ghost" href="/historico">Histórico público</a>
+  </div>
+  <h2>Status das fontes</h2>
+  <table class="tbl">
+    <thead><tr><th>Fonte</th><th>Última safra</th><th>Atualizado em</th><th>Observações</th></tr></thead>
+    <tbody>
+      {% for f in fontes %}
+      <tr>
+        <td><code>{{ f.fonte }}</code></td>
+        <td>{{ f.ultima_safra or "—" }}</td>
+        <td>{{ f.atualizado_em or "—" }}</td>
+        <td class="small">{{ f.observacoes or "" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

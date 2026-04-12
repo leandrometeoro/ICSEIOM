@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Fontes{% endblock %}
+{% block content %}
+<section class="page">
+  <h1>Fontes de dados</h1>
+  <p>Status da ingestão por fonte. Dados populados via scripts Python (<code>scripts/02_…</code> a <code>07_…</code>). Para atualizar uma fonte, rode o script correspondente e registre aqui a nova safra.</p>
+  <table class="tbl">
+    <thead><tr><th>Fonte</th><th>Última safra</th><th>Atualizado em</th><th>Observações</th></tr></thead>
+    <tbody>
+      {% for f in fontes %}
+      <tr>
+        <td><code>{{ f.fonte }}</code></td>
+        <td>{{ f.ultima_safra or "—" }}</td>
+        <td>{{ f.atualizado_em or "—" }}</td>
+        <td class="small">{{ f.observacoes or "" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <h2>α₅ — base de valoração TEEB</h2>
+  <p class="small">Define qual conjunto de coeficientes R$/ha/ano é usado para calcular o α₅ dos eventos. Trocar a base <strong>recalcula todos os eventos já registrados</strong>. Diferença principal: manguezal (global R$ 49.950/ha vs brasil R$ 1.075/ha).</p>
+  <form method="post" action="/admin/alpha5-base" class="form inline">
+    <label>Base ativa
+      <select name="base">
+        <option value="global" {% if alpha5_base == 'global' %}selected{% endif %}>global — Costanza 2014 (USD 9.990/ha manguezal)</option>
+        <option value="brasil" {% if alpha5_base == 'brasil' %}selected{% endif %}>brasil — CCARBON/USP (USD 215/ha manguezal)</option>
+      </select>
+    </label>
+    <button type="submit">Aplicar e recalcular</button>
+  </form>
+  <p class="small">Base atual: <strong>{{ alpha5_base }}</strong></p>
+
+  <h2>Registrar atualização manual</h2>
+  <form method="post" action="/admin/fontes/upload" class="form inline">
+    <label>Fonte
+      <select name="fonte">
+        <option value="IBAMA_SICAFI">IBAMA SICAFI (α₁)</option>
+        <option value="IBGE_SIDRA_3940">IBGE SIDRA 3940 (α₂)</option>
+        <option value="IBGE_SIDRA_5938">IBGE SIDRA 5938 (α₃)</option>
+        <option value="DATASUS_SIH">DATASUS SIH (α₄)</option>
+        <option value="MAPBIOMAS_COSTEIRO">MapBiomas Costeiro (α₅)</option>
+        <option value="TESOURO_GERENCIAL">Tesouro Gerencial (β)</option>
+        <option value="SIAFI_TRANSP">SIAFI / Portal Transparência (χ)</option>
+      </select>
+    </label>
+    <label>Última safra <input type="text" name="ultima_safra" placeholder="2024" required></label>
+    <label>Observações <input type="text" name="observacoes"></label>
+    <button type="submit">Registrar</button>
+  </form>
+</section>
+{% endblock %}

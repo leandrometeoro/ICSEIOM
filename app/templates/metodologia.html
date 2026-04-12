@@ -1,0 +1,1278 @@
+{% extends "base.html" %}
+{% block title %}Metodologia{% endblock %}
+{% block content %}
+<style>
+  .charts figure img { cursor: zoom-in; transition: opacity .15s; }
+  .charts figure img:hover { opacity: .85; }
+  #lightbox {
+    display: none; position: fixed; inset: 0; background: rgba(10,15,30,.92);
+    z-index: 9999; align-items: center; justify-content: center; padding: 2rem;
+    cursor: zoom-out;
+  }
+  #lightbox.open { display: flex; }
+  #lightbox img { max-width: 96vw; max-height: 92vh; box-shadow: 0 0 40px #000; }
+  #lightbox .cap {
+    position: fixed; bottom: 1rem; left: 0; right: 0; text-align: center;
+    color: #eee; font-size: .95rem; font-family: sans-serif;
+  }
+  #lightbox .close {
+    position: fixed; top: 1rem; right: 1.5rem; color: #eee; font-size: 2rem;
+    cursor: pointer; line-height: 1; user-select: none;
+  }
+</style>
+<div id="lightbox" onclick="this.classList.remove('open')">
+  <span class="close">&times;</span>
+  <img src="" alt="">
+  <div class="cap"></div>
+</div>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var lb = document.getElementById('lightbox');
+    var lbImg = lb.querySelector('img');
+    var lbCap = lb.querySelector('.cap');
+    document.querySelectorAll('.charts figure img').forEach(function (img) {
+      img.addEventListener('click', function () {
+        lbImg.src = img.src;
+        lbImg.alt = img.alt;
+        var fc = img.parentElement.querySelector('figcaption');
+        lbCap.textContent = fc ? fc.textContent : '';
+        lb.classList.add('open');
+      });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') lb.classList.remove('open');
+    });
+  });
+</script>
+<section class="hero">
+  <h1>Metodologia ICSEIOM</h1>
+  <p>Definições, fontes de dados, pipeline estatístico e limitações conhecidas do Índice de Custo Socioambiental Evitado por Incidentes com Óleo no Mar.</p>
+</section>
+
+<div class="page">
+
+  <nav class="toc">
+    <strong>Nesta página:</strong>
+    <a href="#equacao">Equação</a> ·
+    <a href="#alpha1">α₁ — multa evitada</a> ·
+    <a href="#estimador">Estimador α̂₁</a> ·
+    <a href="#alpha2">α₂ — pesca</a> ·
+    <a href="#alpha3">α₃ — turismo</a> ·
+    <a href="#alpha4">α₄ — saúde</a> ·
+    <a href="#alpha5">α₅ — ecossistemas</a> ·
+    <a href="#kshare">k — share LGAF</a> ·
+    <a href="#fontes">Fontes de dados</a> ·
+    <a href="#limitacoes">Limitações</a> ·
+    <a href="#reproduzir">Como reproduzir</a>
+  </nav>
+
+  <h2 id="equacao">Equação do ICSEIOM</h2>
+  <p>O ICSEIOM é calculado por evento e somado ao longo do ano:</p>
+  <pre class="eq">ICSEIOM_anual = Σ_eventos [ k · (α₁ + α₂ + α₃ + α₄ + α₅) + β − χ ]</pre>
+  <table class="tbl">
+    <thead><tr><th>Símbolo</th><th>Significado</th><th>Status atual</th></tr></thead>
+    <tbody>
+      <tr><td>α₁</td><td>Multa ambiental evitada/aplicada</td><td>dados reais IBAMA SIFISC, estimador α̂₁ (média geométrica + fallback)</td></tr>
+      <tr><td>α₂</td><td>Pesca (produção aquícola + extrativa marinha)</td><td>dados reais: SIDRA 3940 (aquicultura) + BEPA/MPA (extrativa, por UF, distribuída por município via SisRGP)</td></tr>
+      <tr><td>α₃</td><td>Turismo costeiro (salários CNAE serviços turismo × fator de dependência costeira)</td><td>dados reais: SIDRA 6450 (CEMPRE, CNAE 55+56+79+93) × δ_costeiro (MTur Sol e Praia + QL Economia Azul/Marinha)</td></tr>
+      <tr><td>α₄</td><td>Saúde (custo SUS evitado, CIDs T52/T65/L23/L24/J68)</td><td>dados reais: custos SIH/SUS 2023 × taxas conservadoras da literatura (DWH, Prestige), contabilizado apenas quando o evento é poluente</td></tr>
+      <tr><td>α₅</td><td>Ecossistemas (manguezal, recife, restinga)</td><td>dados reais: áreas MapBiomas Col 9 (safra 2023, 443 municípios) + valoração dupla Costanza 2014 global / CCARBON/USP brasil; recife=0 até ingestão de fonte marinha</td></tr>
+      <tr><td>β</td><td>Receitas LGAF</td><td>placeholder</td></tr>
+      <tr><td>χ</td><td>Custos LGAF</td><td>placeholder</td></tr>
+      <tr><td>k</td><td><strong>Share LGAF</strong> no mérito coletivo</td><td>0,30 (placeholder, calibração Delphi pendente)</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="alpha1">α₁ — Multa ambiental evitada</h2>
+
+  <div class="callout">
+    <strong>Nota de competência autuadora.</strong>
+    A Lei 9966/2000 (art. 27) e o Decreto 4136/2002 (arts 4º-5º) distribuem a
+    competência para autuar incidentes com óleo em águas brasileiras entre
+    três autoridades: <strong>Marinha do Brasil</strong> (DPC e Capitanias
+    dos Portos, em águas jurisdicionais, portos organizados e vias
+    navegáveis federais), <strong>IBAMA</strong> (áreas de interesse
+    ambiental federal e apoio técnico) e <strong>órgãos ambientais
+    estaduais</strong> (águas interiores estaduais e zona costeira sob
+    gestão estadual).
+    O cadastro SIFISC usado aqui cobre apenas o trilho IBAMA — autuações
+    da Marinha correm por processo administrativo próprio da DPC, e as
+    estaduais pelos sistemas dos órgãos estaduais (INEA, CETESB, IMA etc.).
+    Enquanto o LGAF não tiver acesso institucional aos cadastros da DPC e
+    dos órgãos estaduais, α₁ é tratado como
+    <strong>multa IBAMA de referência</strong>: um proxy do valor que
+    seria aplicado em cada município se o derrame fosse poluidor, calibrado
+    sobre a única série histórica publicamente disponível. Os tetos legais
+    (R$ 50 mil a R$ 50 milhões por derrame) são os mesmos para as três
+    autoridades na Lei 9966/00, o que sustenta o uso do IBAMA como proxy
+    até que dados da DPC estejam acessíveis.
+  </div>
+
+  <p>
+    α₁ captura o lucro social associado ao trabalho de análise forense do LGAF
+    na cadeia de multas ambientais por derrame de óleo. A fórmula tem dois ramos
+    mutuamente exclusivos:
+  </p>
+  <ul>
+    <li><strong>Ramo A — laudo confirma óleo poluente:</strong> fração da multa
+      aplicada imputável ao laboratório, mais o custo da análise externa
+      que deixou de ser contratada.</li>
+    <li><strong>Ramo B — laudo isenta o suspeito:</strong> valor esperado da
+      multa que seria aplicada incorretamente sem o laudo, multiplicado pela
+      probabilidade histórica de autuação errônea e pela fração não-recuperável
+      em defesa administrativa, mais o custo da análise externa evitada.</li>
+  </ul>
+  <p>
+    A base do valor esperado da multa é a <strong>média geométrica</strong>
+    das multas IBAMA-óleo históricas do próprio município, com fallback
+    hierárquico (setor PNGC × perfil de infra → setor PNGC) para os 423
+    municípios costeiros sem histórico direto. Os valores são corrigidos
+    por IPCA (BCB SGS 433) do mês do fato até a data corrente. A seção
+    <a href="#estimador">Estimador α̂₁</a> detalha o caminho metodológico
+    — inclusive por que abordagens de machine learning foram descartadas
+    em favor da média.
+  </p>
+
+  <h3>Pipeline de dados α₁</h3>
+  <ol>
+    <li>Baixa o cadastro de autos de infração do IBAMA/SIFISC (zip anual).</li>
+    <li>Restringe a municípios costeiros do PNGC 2021 (IBGE/MMA, 443 munis).</li>
+    <li>Aplica <a href="#filtro-oleo">filtro estrito de óleo</a> em dois
+      trilhos (artigo específico OU descrição) — ver detalhamento abaixo.</li>
+    <li>Corrige cada valor de multa pelo IPCA (BCB SGS 433) do mês do fato até
+      a data corrente.</li>
+    <li>Classifica cada município em um dos 5 setores do PNGC e registra o
+      perfil de infra-óleo (refinaria, terminal, duto, campo E&amp;P).</li>
+    <li>Calcula α̂₁ por município como média geométrica das multas históricas
+      do filtro estrito, com fallback hierárquico para municípios sem
+      histórico direto — ver <a href="#estimador">Estimador α̂₁</a>.</li>
+  </ol>
+
+  <h3 id="filtro-oleo">Filtro estrito de óleo (dois trilhos)</h3>
+  <p>
+    O cadastro bruto SIFISC tem 10.281 autos somando R$ 2,82 bilhões nos
+    municípios costeiros 2005–2026, mas a maior parte é flora, fauna, pesca,
+    CTF, licenciamento genérico — nada disso corresponde à multa contrafactual
+    que o trabalho forense da LGAF ajuda a evitar. Um inspeção dos 86
+    descritivos distintos mais frequentes confirmou que apenas enquadramentos
+    específicos de óleo/hidrocarbonetos devem entrar no universo de treino.
+  </p>
+  <p>
+    Cada auto passa por dois trilhos mutuamente exclusivos. Basta um bater
+    para o auto ser marcado como relevante (coluna
+    <code>mb_alpha1_autos.relevante_oleo = 1</code>):
+  </p>
+  <ul>
+    <li><strong>Trilho A — artigo tipifica descarga/derrame de óleo:</strong>
+      entra independentemente da descrição. A seleção foi feita lendo o
+      texto integral das duas normas e mantendo apenas os artigos que
+      proíbem lançamento em água, descartando os preventivos (plano de
+      emergência, auditoria bienal, livro de óleo, habilitação de
+      transportadora etc.) e os estruturais (definições, competência,
+      catálogo de sanções).
+      <ul>
+        <li><strong>Lei 9966/2000 — arts 15, 16, 17.</strong> Art. 15 proíbe
+          descarga de substâncias categoria A; art. 16 proíbe categorias
+          B/C/D; art. 17 proíbe descarga de óleo, misturas oleosas e lixo
+          em águas sob jurisdição nacional. Os demais artigos da lei são
+          preventivos (arts 5-14), estruturais (arts 1-4, 18-24, 25-35) ou
+          remetidos à Lei 9605/98 (art. 26 determina que a descarga em si
+          seja punida pela 9605, não pela 9966).</li>
+        <li><strong>Decreto 4136/2002 — arts 29, 30, 31, 32, 33, 36, 37,
+          38, 39, 42, 43, 44, 45.</strong> São as Subseções VI a XVII do
+          capítulo "Das Infrações Relativas à Descarga". Incluem descarga
+          de substâncias A/B/C/D por navio e por porto, descarga de óleo
+          e misturas oleosas, descarte contínuo de <em>água de produção</em>
+          fora do limite TOG da Resolução CONAMA 393/2007 (art. 38, típico
+          de plataforma offshore madura), e casos excepcionais de pesquisa
+          ou salvaguarda sem comprovação. Excluídos explicitamente os arts
+          34-35 (esgoto sanitário) e 40-41 (plásticos), que não são
+          hidrocarbonetos. Também excluídos os arts 12-28 e 46-48, que são
+          preventivos/administrativos, e o art. 9, que só cataloga o menu
+          de sanções aplicáveis.</li>
+      </ul>
+    </li>
+    <li><strong>Trilho B — artigo é genérico, mas a descrição é
+      oleo-específica:</strong>
+      Decreto 6514/2008 (sanções ambientais em geral), Lei 9605/98 (crimes
+      ambientais), autos sem norma ou com norma não classificada entram
+      apenas se a descrição casar com a <em>whitelist</em> e não casar com a
+      <em>blacklist</em>.
+      <ul>
+        <li><strong>Whitelist (regex):</strong>
+          <code>\bóleo\b | \bóleos\b | hidrocarb | petról | petrol | combustí
+          | gasolin | diesel | oleoduto | lubrificant | \bGLP\b | liquefeito
+          de petról | bunker</code></li>
+        <li><strong>Blacklist (regex):</strong>
+          <code>óleos? vegetais? | óleo vegetal | óleo essencial |
+          cadastro técnico federal | sem inscrição no cadastro |
+          falta de entrega.*relatório anual | deixar de inscrever-se</code>
+          — exclui refinaria de óleo vegetal e, principalmente, autos
+          administrativos de CTF (falta de inscrição no Cadastro Técnico
+          Federal por postos de combustível, GLP etc.), que são multas
+          burocráticas, não eventos de poluição.</li>
+      </ul>
+    </li>
+  </ul>
+  <p>
+    <strong>Universo final após filtro:</strong> 201 autos totalizando
+    R$ 84,1 milhões — 199 pelo trilho A (artigo que tipifica descarga de
+    óleo) e 2 pelo trilho B (descrição casa whitelist sem bater na
+    blacklist). Isto é 2,0% dos autos e 3,0% do valor bruto dos autos
+    SIFISC em municípios costeiros 2005-2026. O maior contribuinte em
+    volume é o Decreto 4136/02 art. 38 (descarte de água de produção fora
+    do limite), típico de plataforma offshore madura. O restante (flora, fauna, pesca,
+    CTF, resíduos não-oleosos) é descartado do treino de α₁.
+  </p>
+  <p class="sub-ev">
+    Implementação: <code>scripts/21_filtrar_alpha1_oleo.py</code>. Backup do
+    cadastro antes do filtro em <code>mb_alpha1_multa_bruto</code>.
+  </p>
+
+  <h2 id="alpha2">α₂ — Pesca</h2>
+
+  <p>
+    α₂ captura o valor da produção pesqueira e aquícola que estaria em
+    risco num município costeiro atingido por derrame de óleo. Quando o
+    LGAF contribui para conter ou identificar um incidente, o α₂ quantifica
+    a produção que deixou de ser comprometida.
+  </p>
+
+  <h3>Composição de α₂</h3>
+  <p>
+    Não existe no IBGE uma série anual de <strong>pesca extrativa marinha
+    por município</strong> — a tabela SIDRA 1108 encerrou em 2009 e só
+    cobria até UF. A estratégia adotada combina duas componentes:
+  </p>
+  <pre class="eq">α₂(muni, ano) = aquicultura_SIDRA(muni, ano) + pesca_extrativa_BEPA(muni, ano)</pre>
+
+  <p>A pesca extrativa do BEPA é separada por <strong>setor</strong>
+    (Artesanal e Industrial) e distribuída por pesos diferenciados:</p>
+  <pre class="eq">pesca_extrativa(muni, ano) = Σ_cat [ ton_art(UF,ano,cat) × peso_pescadores(muni) × preço(cat) ]
+                            + Σ_cat [ ton_ind(UF,ano,cat) × peso_armadores(muni) × preço(cat) ]</pre>
+  <p>
+    No BEPA acumulado 1950-2022, a pesca artesanal totaliza 14,6 milhões de
+    toneladas e a industrial 17,2 milhões (razão 1:1,17). A separação garante
+    que municípios com portos industriais (Itajaí, Rio Grande, Santos) recebam
+    a parcela industrial proporcionalmente à infraestrutura de armação, enquanto
+    municípios com grande número de pescadores artesanais recebam a parcela
+    correspondente.
+  </p>
+
+  <h3>Fontes de dados α₂</h3>
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>Fonte</th>
+        <th>Órgão</th>
+        <th>Granularidade</th>
+        <th>Período</th>
+        <th>Uso no ICSEIOM</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>SIDRA 3940</strong> (PPM — Produção da aquicultura)</td>
+        <td>IBGE</td>
+        <td>município × ano</td>
+        <td>2013-2024</td>
+        <td>Valor da produção aquícola (var 215, Mil Reais, classificação
+          654 cat 0 = Total). Toneladas (var 4146) baixadas por produto
+          individual em kg (peixes=79366, camarão=32887,
+          ostras/vieiras/mexilhões=32889) e somadas por município×ano.
+          O total (cat 0) retorna indisponível porque as unidades variam
+          por produto (kg, milheiros, nenhuma). 340 municípios,
+          1.561 células com toneladas de 3.392 totais.</td>
+      </tr>
+      <tr>
+        <td><strong>BEPA — Banco da Reconstrução da Pesca Marinha</strong></td>
+        <td>MPA</td>
+        <td>UF × ano × espécie</td>
+        <td>1950-2022</td>
+        <td>Captura em <strong>toneladas</strong> por estado, ano,
+          grande grupo taxonômico (Peixes, Crustáceos, Moluscos) e
+          família. 116 mil linhas, 17 estados costeiros. Convertido
+          em R$ via preços por categoria (ver abaixo).</td>
+      </tr>
+      <tr>
+        <td><strong>SisRGP — Pescadores</strong></td>
+        <td>MPA</td>
+        <td>por pescador (código IBGE do município)</td>
+        <td>2026 (cadastro vigente)</td>
+        <td>1,43 milhão de pescadores em 3.427 municípios
+          (17 UFs costeiras). <strong>Peso para distribuir
+          a produção BEPA do setor Artesanal entre municípios</strong>:
+          <code>ton_muni = ton_UF_art × (pescadores_muni / pescadores_UF)</code>.</td>
+      </tr>
+      <tr>
+        <td><strong>SisRGP — Armadores</strong></td>
+        <td>MPA</td>
+        <td>por armador (cidade/UF)</td>
+        <td>2026 (cadastro vigente)</td>
+        <td>3.971 armadores em 171 municípios (PF e PJ titulares de
+          embarcação de pesca). <strong>Peso para distribuir a produção
+          BEPA do setor Industrial entre municípios</strong>:
+          <code>ton_muni = ton_UF_ind × (armadores_muni / armadores_UF)</code>.
+          UF extraída do campo cidade do CSV (não da coluna UF, que é
+          o estado de registro no RGP).</td>
+      </tr>
+      <tr>
+        <td><strong>MPA Dados Aquicultura</strong></td>
+        <td>MPA</td>
+        <td>UF × espécie</td>
+        <td>2023</td>
+        <td>Produção (mil t) <strong>e Valor (mil R$)</strong> por espécie.
+          Usado para calcular <strong>preço implícito</strong> (R$/ton)
+          de peixes, camarões e moluscos na aquicultura: fonte primária
+          de precificação.</td>
+      </tr>
+      <tr>
+        <td><strong>ComexStat — Exportação por NCM</strong></td>
+        <td>MDIC</td>
+        <td>NCM 8 dígitos × UF × mês</td>
+        <td>2023</td>
+        <td>Preço FOB (US$/ton) de exportação por produto (NCM separando
+          lagosta, camarão, caranguejo, peixe, molusco). Usado como
+          <strong>fonte secundária</strong> para categorias sem dado
+          interno (lagosta, siri/caranguejo).</td>
+      </tr>
+      <tr>
+        <td><strong>CEAGESP — Cotações de pescado</strong></td>
+        <td>CEAGESP/CONAB</td>
+        <td>produto × dia</td>
+        <td>2024-2026</td>
+        <td>Preço atacado em São Paulo. Usado como <strong>referência
+          de validação</strong> para lagosta (R$ 80-120/kg) e caranguejo
+          (R$ 39-45/kg).</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Precificação por categoria</h3>
+  <p>
+    O BEPA fornece captura em <strong>toneladas</strong>, não em reais.
+    Para converter, cada linha do BEPA é classificada em uma de 6
+    categorias de preço pela família taxonômica, e multiplicada pelo
+    preço correspondente:
+  </p>
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>Categoria</th>
+        <th class="num">R$/ton</th>
+        <th>Famílias incluídas</th>
+        <th>Fonte do preço</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Peixes</td>
+        <td class="num">8.000</td>
+        <td>Todos os peixes (sardinha, corvina, atum, tainha etc.)</td>
+        <td>MPA Dados Aquicultura 2023: Valor ÷ Produção agregado peixes</td>
+      </tr>
+      <tr>
+        <td>Camarões</td>
+        <td class="num">25.000</td>
+        <td>Penaeidae, Solenoceridae, Pandalidae, Sergestidae</td>
+        <td>MPA Dados Aquicultura 2023: Valor ÷ Produção camarão</td>
+      </tr>
+      <tr>
+        <td>Lagostas</td>
+        <td class="num">80.000</td>
+        <td>Palinuridae, Scyllaridae, Nephropidae</td>
+        <td>CEAGESP cotações atacado 2024 (R$ 80-120/kg, valor conservador)</td>
+      </tr>
+      <tr>
+        <td>Siris e caranguejos</td>
+        <td class="num">15.000</td>
+        <td>Portunidae, Ocypodidae, Grapsidae, Gecarcinidae etc.</td>
+        <td>CEAGESP cotações atacado 2026 (R$ 39-45/kg atacado, ~R$ 15/kg primeira venda)</td>
+      </tr>
+      <tr>
+        <td>Moluscos</td>
+        <td class="num">15.000</td>
+        <td>Todos os moluscos (lula, polvo, marisco, ostra etc.)</td>
+        <td>MPA Dados Aquicultura 2023: Valor ÷ Produção ostras/vieiras/mexilhões</td>
+      </tr>
+      <tr>
+        <td>Outros invertebrados</td>
+        <td class="num">10.000</td>
+        <td>Demais (poliquetas, ouriços etc.)</td>
+        <td>Média ponderada geral (placeholder)</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    Todos os preços são armazenados na tabela <code>parametros</code>
+    (chaves <code>preco_ton_peixes</code>, <code>preco_ton_camaroes</code>,
+    <code>preco_ton_lagostas</code>, <code>preco_ton_siris_carang</code>,
+    <code>preco_ton_moluscos</code>, <code>preco_ton_outros</code>) e
+    podem ser ajustados via SQL ou UI sem reprocessar os dados brutos.
+  </p>
+
+  <div class="callout">
+    <strong>Validação cruzada dos preços.</strong>
+    Para peixes, camarões e moluscos o preço implícito MPA (Valor ÷ Produção)
+    foi validado contra o preço FOB de exportação do ComexStat/MDIC 2023
+    (NCM 8 dígitos). A razão FOB/interno observada foi 2,18× (peixes),
+    4,00× (camarões) e 3,53× (moluscos), consistente com o prêmio de
+    exportação esperado. Para lagosta e siri/caranguejo (sem dado MPA de
+    valor), o preço foi ancorado nas cotações CEAGESP de atacado, que são
+    dados públicos e auditáveis.
+  </div>
+
+  <h3>Pipeline α₂</h3>
+  <ol>
+    <li><strong>Aquicultura:</strong> API SIDRA v3 tabela 3940.
+      Valor: var 215 (Mil Reais), classificação 654 cat 0 (Total).
+      Toneladas: var 4146 por produto individual em kg (peixes=79366,
+      camarão=32887, ostras/vieiras/mexilhões=32889), somados e
+      convertidos para toneladas. Produtos em outras unidades (milheiros
+      para alevinos, larvas, sementes) não são somáveis e ficam sem
+      tonelada. Nível N6 (município), lotes de 50 municípios.
+      <code>scripts/30_ingest_alpha2_pesca.py</code>.</li>
+    <li><strong>Pesca extrativa:</strong> CSV BEPA → agrega toneladas por
+      (UF, ano, categoria de preço, setor) → distribuição diferenciada:
+      <ul>
+        <li>Setor <strong>Artesanal</strong>: peso SisRGP Pescador →
+          <code>ton_muni = ton_UF_art × (pescadores_muni / pescadores_UF)</code></li>
+        <li>Setor <strong>Industrial</strong>: peso SisRGP Armador →
+          <code>ton_muni = ton_UF_ind × (armadores_muni / armadores_UF)</code></li>
+      </ul>
+      → multiplica pelo preço da categoria → soma com aquicultura.
+      <code>scripts/31_ingest_alpha2_bepa.py</code>.</li>
+  </ol>
+
+  <h3>Resultado atual</h3>
+  <p>
+    440 municípios com dado, 4.999 registros (2013-2024).
+    Composição: pesca extrativa R$ 33,8 bilhões + aquicultura R$ 19,3 bilhões
+    = R$ 53,1 bilhões total no período. Top municípios: Aracati (CE),
+    Pendências (RN), Florianópolis (SC), Canguaretama (RN), Angra dos Reis (RJ).
+  </p>
+
+  <div class="callout">
+    <strong>Limitações da distribuição.</strong>
+    Os pesos SisRGP (pescadores para artesanal, armadores para industrial)
+    são proxies da atividade pesqueira local, não medidas diretas de produção.
+    Municípios com muitos pescadores registrados mas pouca atividade real
+    (aposentados, inativos) podem estar sobre-representados na parcela
+    artesanal. Na parcela industrial, municípios sem armador registrado
+    não recebem atribuição industrial (a produção fica concentrada nos
+    171 municípios com armadores). Quando dados de produção por município
+    estiverem disponíveis (desembarque monitorado, PREPS/SISRGP embarcado),
+    devem substituir os pesos atuais.
+  </div>
+  <div class="callout">
+    <strong>Toneladas da aquicultura.</strong>
+    A variável 4146 do SIDRA 3940 tem unidades distintas por produto:
+    quilogramas (peixes, camarão, ostras/mexilhões), milheiros (alevinos,
+    larvas, sementes de moluscos) e nenhuma (outros). O total agregado
+    retorna indisponível porque o IBGE não soma unidades incompatíveis.
+    O pipeline baixa apenas os produtos em kg e converte para toneladas.
+    Municípios que só produzem alevinos/larvas/sementes ficam sem tonelada
+    mas mantêm o valor em R$ (informado diretamente pelo IBGE ao produtor).
+  </div>
+
+  <h2 id="alpha3">α₃ — Turismo costeiro</h2>
+
+  <div class="callout">
+    α₃ captura o valor da economia turística costeira que estaria em risco
+    caso um incidente com óleo atingisse determinado município. Não é o PIB
+    turístico total do município: é a parcela que depende da costa e que
+    seria afetada por um derrame.
+  </div>
+
+  <h3>Fórmula α₃</h3>
+  <pre class="eq">α₃(muni, evento) = V_tur(muni) × δ_costeiro(muni) × frac(d, R)</pre>
+  <table class="tbl">
+    <thead><tr><th>Componente</th><th>Significado</th><th>Fonte</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>V_tur</td>
+        <td>Valor econômico amplo do turismo no município (R$/ano)</td>
+        <td>IBGE SIDRA 6450 (CEMPRE), variável 662, soma das CNAE 55+56+79+93</td>
+      </tr>
+      <tr>
+        <td>δ_costeiro</td>
+        <td>Fração do turismo que depende da costa (0 a 1)</td>
+        <td>MTur Atividades Turísticas (ranking Sol e Praia) + QL turismo (Cap. 36, Economia Azul/Marinha)</td>
+      </tr>
+      <tr>
+        <td>frac(d, R)</td>
+        <td>Decaimento espacial do evento (distância ao epicentro)</td>
+        <td>Haversine, já implementado em <code>calc.py</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>V_tur — valor econômico do turismo</h3>
+  <p>
+    O <strong>SIDRA 6450</strong> (Cadastro Central de Empresas, CEMPRE) fornece
+    salários e outras remunerações (variável 662, em R$ mil) por divisão CNAE 2.0
+    para todos os 5.570 municípios brasileiros, série 2006–2021.
+  </p>
+  <p>
+    As divisões CNAE incluídas seguem a classificação de setores da Economia do
+    Mar e Costeira definida por <strong>Freitas, Farias &amp; Carvalho (2022,
+    Tabela 4)</strong>, no Capítulo 37 do livro <em>Economia Azul: Vetor para o
+    Desenvolvimento do Brasil</em> (DGN/Marinha, ISBN 978-65-86394-07-8, p.784-785):
+  </p>
+  <table class="tbl">
+    <thead><tr><th>CNAE</th><th>Atividade</th><th>Código SIDRA (classif. 12762)</th></tr></thead>
+    <tbody>
+      <tr><td>55</td><td>Alojamento (hotéis e similares)</td><td>117544</td></tr>
+      <tr><td>56</td><td>Alimentação (restaurantes, serv. ambulantes)</td><td>117545</td></tr>
+      <tr><td>79</td><td>Agências de viagem e operadores turísticos</td><td>117549</td></tr>
+      <tr><td>93</td><td>Atividades esportivas e de recreação</td><td>117556</td></tr>
+    </tbody>
+  </table>
+  <p>
+    A Tabela 4 de Freitas et al. (2022) lista ainda CNAE 68 (imobiliário),
+    77 (aluguel de equipamentos) e 93.12 (clubes). As CNAE 68 e 77 foram
+    excluídas por não serem separáveis entre uso turístico e uso residencial/comercial
+    nos dados agregados do SIDRA.
+  </p>
+  <p>
+    O <strong>GT PIB do Mar</strong> (CIRM/IBGE, Relatório Final 2025) adota uma
+    classificação mais restrita: apenas CNAE 55 e 79 como economia do mar direta,
+    excluindo CNAE 56 (alimentação) por impossibilidade de separar a parcela
+    marítima. No ICSEIOM, essa separação é feita pelo fator δ_costeiro.
+  </p>
+
+  <h3>δ_costeiro — fator de dependência costeira</h3>
+  <p>
+    O fator δ_costeiro (0 a 1) captura quanto do turismo do município depende do
+    mar e da costa. Usa-se uma hierarquia de fontes:
+  </p>
+  <h4>Fonte primária: ranking Sol e Praia (MTur)</h4>
+  <p>
+    O <strong>Relatório de Atividades Turísticas</strong> do Mapa do Turismo
+    Brasileiro (MTur, 2024/2025) contém um questionário preenchido pelos gestores
+    municipais de turismo. O campo <em>Segmentos Turísticos</em> lista, por ordem
+    de importância (1 = mais importante, 6 = menos), os segmentos: Negócios e
+    Eventos, Sol e Praia, Turismo Cultural, Ecoturismo, Turismo de Aventura, Outros.
+  </p>
+  <p>
+    A conversão para δ_costeiro é linear:
+  </p>
+  <pre class="eq">δ_costeiro = (7 − ranking_sol_praia) / 6</pre>
+  <table class="tbl">
+    <thead><tr><th>Ranking Sol e Praia</th><th>δ_costeiro</th><th>Exemplo</th></tr></thead>
+    <tbody>
+      <tr><td>1 (principal)</td><td>1,00</td><td>Porto Seguro, Salvador, Florianópolis, Santos</td></tr>
+      <tr><td>2</td><td>0,83</td><td>São Luís, Niterói</td></tr>
+      <tr><td>3</td><td>0,67</td><td>—</td></tr>
+      <tr><td>4</td><td>0,50</td><td>—</td></tr>
+      <tr><td>5</td><td>0,33</td><td>Paraty, São Paulo</td></tr>
+      <tr><td>6 (menos importante)</td><td>0,17</td><td>Rio de Janeiro, Arraial do Cabo, Petrópolis</td></tr>
+    </tbody>
+  </table>
+  <p>Cobertura: 1.613 municípios com dado de segmento preenchido.</p>
+
+  <h4>Fallback: Especialização Turística × QL da RTA</h4>
+  <p>
+    Para municípios sem dado de Sol e Praia, usa-se o produto de dois indicadores:
+  </p>
+  <ul>
+    <li><strong>Especialização Turística</strong> (0–41): score composto do
+      <em>Relatório de Categorização Simplificado</em> (MTur 2024/2025), baseado
+      em densidade de estabelecimentos, emprego formal e avaliações online.
+      2.874 municípios cobertos.</li>
+    <li><strong>Quociente Locacional (QL)</strong> de turismo por Região Turística
+      Azul (RTA): calculado por <strong>Sanguinet &amp; Sass (2022)</strong>,
+      Cap. 36 do livro <em>Economia Azul</em> (DGN/Marinha), Apêndice A
+      (p.776-777), usando dados RAIS 2017. 58 RTAs costeiras com QL de 0,04
+      (Florestas do Marajó) a 23,5 (Costa do Descobrimento).</li>
+  </ul>
+  <pre class="eq">δ_costeiro = (Espec / Espec_max) × (QL / QL_max)</pre>
+  <p>
+    Se nenhum dado está disponível (município costeiro fora do Mapa do Turismo),
+    aplica-se δ_costeiro = 0,10 (valor conservador padrão).
+  </p>
+
+  <h3>Fontes de dados α₃</h3>
+  <table class="tbl">
+    <thead><tr><th>Fonte</th><th>Dado</th><th>Cobertura</th><th>Referência</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>IBGE SIDRA 6450 (CEMPRE)</td>
+        <td>Salários e remunerações por CNAE divisão por município</td>
+        <td>5.570 municípios, 2006–2021</td>
+        <td><a href="https://sidra.ibge.gov.br/tabela/6450" target="_blank">sidra.ibge.gov.br/tabela/6450</a></td>
+      </tr>
+      <tr>
+        <td>MTur — Atividades Turísticas</td>
+        <td>Ranking de segmentos turísticos (Sol e Praia, Ecoturismo etc.)</td>
+        <td>~2.056 municípios, 17 UFs costeiras</td>
+        <td><a href="https://dados.turismo.gov.br" target="_blank">dados.turismo.gov.br</a></td>
+      </tr>
+      <tr>
+        <td>MTur — Categorização Simplificado</td>
+        <td>Especialização Turística (score 0–41) + Região Turística</td>
+        <td>2.874 municípios</td>
+        <td><a href="https://sistema.mapa.turismo.gov.br" target="_blank">sistema.mapa.turismo.gov.br</a></td>
+      </tr>
+      <tr>
+        <td>Economia Azul (DGN/Marinha, 2022)</td>
+        <td>QL turismo por Região Turística Azul (Apêndice A, Cap. 36)</td>
+        <td>58 RTAs costeiras</td>
+        <td>Sanguinet &amp; Sass (2022). <em>Turismo Azul no Brasil</em>. In: Economia Azul, DGN/Marinha. ISBN 978-65-86394-07-8. p.759-777.</td>
+      </tr>
+      <tr>
+        <td>Economia Azul (DGN/Marinha, 2022)</td>
+        <td>Classificação CNAE setor Serviços da Economia do Mar (Tabela 4, Cap. 37)</td>
+        <td>Referência metodológica</td>
+        <td>Freitas, Farias &amp; Carvalho (2022). <em>Panorama das Ocupações das RM Litorâneas</em>. In: Economia Azul, DGN/Marinha. p.779-803.</td>
+      </tr>
+      <tr>
+        <td>GT PIB do Mar (CIRM/IBGE, 2025)</td>
+        <td>Metodologia de mensuração da economia do mar (CNAE 55 e 79 como economia do mar direta)</td>
+        <td>Referência metodológica</td>
+        <td>Relatório Final do GT PIB do Mar, out/2025.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Pipeline α₃</h3>
+  <ol>
+    <li><strong>Categorização MTur</strong>: carregar XLSX Simplificado (4 arquivos regionais)
+      → extrair Especialização Turística e Região Turística por município.</li>
+    <li><strong>Atividades Turísticas MTur</strong>: carregar XLSX por UF (17 arquivos)
+      → extrair ranking Sol e Praia (coluna 84/90).</li>
+    <li><strong>SIDRA 6450</strong>: baixar da API salários CNAE 55+56+79+93 por município costeiro.
+      Batches de 20 com fallback individual para códigos IBGE inválidos.</li>
+    <li><strong>Calcular δ_costeiro</strong>: Sol e Praia (primário) ou Espec×QL (fallback).</li>
+    <li><strong>α₃ = V_tur × δ_costeiro</strong>: inserir em <code>alpha3_turismo</code>.</li>
+  </ol>
+  <p>
+    Script: <code>scripts/04_ingest_alpha3_turismo.py</code>.
+    Resultado atual: 50 municípios, R$ 7,3 bilhões de α₃ total (ano 2021).
+  </p>
+
+  <div class="callout">
+    <strong>Limitações α₃.</strong>
+    O ranking Sol e Praia é auto-declarado pelo gestor municipal (subjetivo).
+    A escala 1–6 é ordinal: a conversão linear (7−rank)/6 assume distâncias
+    iguais entre ranks. V_tur usa apenas salários formais (CEMPRE), não captura
+    economia informal do turismo. SIDRA 6450 tem dados até 2021; municípios com
+    sigilo estatístico (menos de 3 empresas na CNAE) retornam "X" e ficam sem dado.
+    11 dos 61 municípios costeiros do banco não têm dados SIDRA (códigos IBGE
+    incorretos ou municípios muito pequenos).
+  </div>
+
+  <h2 id="alpha4">α₄ — Custo de saúde evitado</h2>
+
+  <div class="callout">
+    α₄ captura o custo ao SUS que a população do município incorreria se
+    entrasse em contato com óleo de um derrame costeiro. É a <em>única</em>
+    componente do ICSEIOM que <strong>só é somada quando o evento é poluente</strong>
+    (<code>foi_poluente = True</code>), porque é a identificação do poluente
+    pela LGAF que aciona o alerta à população e evita o contato. Em alarmes
+    falsos não há custo sanitário a evitar. É o inverso do α₃ (turismo, que
+    só é preservado quando o evento NÃO polui) e complementar ao α₁
+    (multa, que é evitada quando o evento NÃO é poluente).
+  </div>
+
+  <h3>Fórmula α₄</h3>
+  <pre class="eq">α₄(muni, ano) = pop(muni) × Σ_grupo [ casos_100k(grupo) × custo_grupo ] / 100.000</pre>
+  <p>
+    Os CIDs considerados são agrupados em três síndromes operacionais, cada uma com
+    uma taxa conservadora de procura por atendimento (casos/100 mil habitantes)
+    e um custo médio por atendimento na rede SUS:
+  </p>
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>Grupo</th>
+        <th>CIDs</th>
+        <th>Casos/100k</th>
+        <th>Custo médio SUS</th>
+        <th>Subtotal /100k</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Dermatite de contato</td>
+        <td>L23 (alérgica) + L24 (irritante)</td>
+        <td>200</td>
+        <td>R$ 300 (ambulatorial)</td>
+        <td>R$ 60.000</td>
+      </tr>
+      <tr>
+        <td>Respiratória por inalação química</td>
+        <td>J68</td>
+        <td>350</td>
+        <td>R$ 5.000 (internação)</td>
+        <td>R$ 1.750.000</td>
+      </tr>
+      <tr>
+        <td>Efeitos tóxicos sistêmicos</td>
+        <td>T52 (solventes orgânicos) + T65 (outras substâncias)</td>
+        <td>75</td>
+        <td>R$ 8.000 (internação)</td>
+        <td>R$ 600.000</td>
+      </tr>
+      <tr>
+        <td><strong>Total</strong></td>
+        <td></td>
+        <td><strong>625</strong></td>
+        <td></td>
+        <td><strong>R$ 2.410.000</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Calibração das taxas conservadoras</h3>
+  <p>
+    As taxas foram calibradas a partir de estudos de derrames reais, usando o
+    extremo inferior das faixas reportadas:
+  </p>
+  <ul>
+    <li><strong>Dermatite (200/100k)</strong>: meta-meio do range 150–300/100k
+      observado em populações expostas não-trabalhadoras. Na coorte DWH, as
+      razões de prevalência ficaram entre 3,1 e 4,5 para trabalhadores de
+      resposta, com baseline ocupacional de 0,5–1,9/1000 trabalhador-ano.</li>
+    <li><strong>Respiratória (350/100k)</strong>: no estudo Prestige, 35% dos
+      trabalhadores de limpeza mantinham sintomas respiratórios 6 anos após
+      o derrame. A coorte USCG do DWH teve RR de 1,32 (IC 95%: 1,09–1,58)
+      para condições respiratórias crônicas e RR de 1,83 (1,05–3,19) para asma.</li>
+    <li><strong>Tóxica (75/100k)</strong>: casos agudos, 5–10× o baseline
+      hospitalar do SIH para a categoria "Efeitos tóxicos de substâncias de
+      origem principalmente não-medicinal".</li>
+  </ul>
+
+  <h3>Custos médios SUS</h3>
+  <p>
+    Os custos por atendimento foram extraídos dos relatórios públicos de
+    morbidade hospitalar do SUS (DATASUS SIH, 2023), dividindo o valor
+    total pelas AIH aprovadas nas categorias equivalentes da Lista de
+    Morbidade CID-10. Para dermatite, o custo usado é o de atendimento
+    ambulatorial (SIA/SUS), não internação, porque a maioria dos casos de
+    contato com óleo não exige hospitalização.
+  </p>
+
+  <h3>Pipeline α₄</h3>
+  <ol>
+    <li><strong>População</strong>: carrega população dos 443 municípios costeiros
+      (<code>municipios_brasil WHERE is_costeiro=1</code>), usando
+      <code>municipios_costeiros.pop_2022</code> para a semente de 61 e
+      <code>mb_muni_socio_anual</code> para os demais.</li>
+    <li><strong>Custo por 100k</strong>: soma dos 3 grupos síndromicos
+      = R$ 2,41 milhões/100 mil habitantes/ano.</li>
+    <li><strong>α₄(muni) = pop × 2,41M/100k</strong>: inserir em
+      <code>alpha4_saude</code>.</li>
+    <li><strong>Regra no calc.py</strong>: α₄ só entra no ICSEIOM quando
+      <code>foi_poluente=True</code>.</li>
+  </ol>
+  <p>
+    Script: <code>scripts/05_ingest_alpha4_saude.py --ano 2023</code>.
+    Resultado atual: 443 municípios, R$ 1,12 bilhões de α₄ total.
+  </p>
+
+  <h3>Fontes de dados α₄</h3>
+  <table class="tbl">
+    <thead><tr><th>Fonte</th><th>Dado</th><th>Referência</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>DATASUS SIH/SUS</td>
+        <td>Valor médio por AIH por categoria de morbidade</td>
+        <td><a href="http://tabnet.datasus.gov.br/cgi/deftohtm.exe?sih/cnv/nibr.def" target="_blank">tabnet.datasus.gov.br</a></td>
+      </tr>
+      <tr>
+        <td>Sandifer et al. (2014)</td>
+        <td>Efeitos sociossanitários do Deepwater Horizon</td>
+        <td><em>Oceanography</em> 27(4):86–93. DOI:10.5670/oceanog.2014.84</td>
+      </tr>
+      <tr>
+        <td>Zock et al. (2007)</td>
+        <td>Sintomas respiratórios prolongados após Prestige</td>
+        <td><em>Am J Respir Crit Care Med</em> 176(6):610–616</td>
+      </tr>
+      <tr>
+        <td>Soares et al. (2020)</td>
+        <td>Derrame no Nordeste brasileiro 2019</td>
+        <td><em>Marine Policy</em> 115:103879</td>
+      </tr>
+      <tr>
+        <td>IBGE</td>
+        <td>População municipal 2022 e séries históricas</td>
+        <td>Censo 2022 + Estimativas TCU</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <strong>Limitações α₄.</strong>
+    O modelo assume que a população seria igualmente exposta em qualquer ponto
+    do município, o que não é verdade (a orla afeta mais quem mora perto dela);
+    a ponderação espacial por <code>frac(distância)</code> no
+    <code>calc.py</code> mitiga parcialmente esse problema. As taxas de
+    procura por atendimento foram calibradas por literatura internacional
+    (DWH, Prestige), com ajuste para populações não-trabalhadoras; não há
+    validação direta para a costa brasileira. Os custos SUS não incluem
+    atendimentos particulares ou de convênios. A morbidade psiquiátrica
+    (transtornos de humor, ansiedade) documentada em populações expostas
+    a derrames foi deliberadamente excluída, por não ter CID-10 de contato
+    direto com óleo. Para refinamento futuro, seria útil puxar dados reais
+    por município via <code>pysus</code> (microdatos SIH-RD) e aplicar
+    multiplicadores ajustados ao perfil demográfico local.
+  </div>
+
+  <h2 id="alpha5">α₅ — Serviços ecossistêmicos</h2>
+  <p>
+    α₅ representa o valor anual dos serviços ecossistêmicos prestados pelos
+    ecossistemas costeiros vulneráveis a derrames: manguezais, recifes de
+    coral e restingas. Quando um derrame é identificado e contido pela LGAF,
+    esses serviços deixam de ser perdidos (ou de exigir décadas de
+    recuperação).
+  </p>
+  <pre class="eq">α₅(muni) = ha_mang·coef_mang + ha_recife·coef_recife + ha_restinga·coef_restinga</pre>
+
+  <h3>Valoração dupla</h3>
+  <p>
+    Existem dois conjuntos de coeficientes R$/ha/ano, entre os quais o operador
+    pode alternar em <code>/admin/fontes</code>. A escolha afeta o α₅ de todos
+    os eventos do histórico (recálculo automático).
+  </p>
+  <table class="tbl">
+    <thead><tr><th>Ecossistema</th><th>Base <em>global</em> (Costanza 2014)</th><th>Base <em>brasil</em> (CCARBON/USP)</th></tr></thead>
+    <tbody>
+      <tr><td>Manguezal</td><td>R$ 49.950/ha (USD 9.990)</td><td><strong>R$ 1.075/ha (USD 215)</strong></td></tr>
+      <tr><td>Recife de coral</td><td>R$ 25.575/ha (USD 5.115)</td><td>R$ 25.575/ha <span class="small">(sem valoração brasileira específica publicada)</span></td></tr>
+      <tr><td>Restinga</td><td>R$ 2.455/ha (USD 491)</td><td>R$ 2.455/ha <span class="small">(idem)</span></td></tr>
+    </tbody>
+  </table>
+  <p class="small">
+    Costanza et al. (2014) usa médias globais ponderadas por serviços
+    (sequestro de carbono, berçário pesqueiro, proteção costeira, turismo).
+    CCARBON/USP mede em campo manguezais amazônicos brasileiros. A diferença
+    de ~46x no manguezal não é erro de nenhum dos dois — é o contraste entre
+    média global e medição local. Manter as duas bases permite calibrar o
+    ICSEIOM conforme a exigência de defensibilidade do público-alvo:
+    Costanza é a referência mais citada internacionalmente; CCARBON é
+    conservadora e brasileira (menos atacável por órgãos fiscalizadores
+    domésticos).
+  </p>
+
+  <h3>Áreas (hectares) por município</h3>
+  <p>
+    Hectares reais por município vêm do
+    <strong>MapBiomas Brasil Coleção 9</strong> —
+    <em>Coverage by biomes, states and municipalities (1985–2023)</em>
+    (DOI <code>10.58053/MapBiomas/VEJDZC</code>, publicado em janeiro/2025).
+    O arquivo oficial (68 MB, xlsx) é baixado diretamente do Dataverse
+    MapBiomas (<code>data.mapbiomas.org/api/access/datafile/179</code>)
+    e armazenado em <code>data/mapbiomas/</code>.
+  </p>
+  <ul>
+    <li><strong>Manguezal</strong>: classe MapBiomas <code>5</code> (Mangue), safra 2023. Total nacional entre os 443 costeiros: <strong>1.037.364 ha</strong>. Lideres: Soure/PA 43.099 ha (Marajó), São Luís/MA 8.479 ha, Alcântara/MA 2.844 ha, Santos/SP 2.374 ha, Rio de Janeiro/RJ 2.364 ha.</li>
+    <li><strong>Restinga</strong>: soma das classes <code>49</code> (Restinga Arbórea) e <code>50</code> (Restinga Herbácea), safra 2023. Total nacional: <strong>810.611 ha</strong>.</li>
+    <li><strong>Recife de coral</strong>: <code>ha_recife = 0</code>. A Coleção 9 é land cover terrestre e não cobre ecossistemas marinhos. <strong>TODO</strong>: ingerir fonte específica (Allen Coral Atlas ou Atlas dos Recifes de Coral do ICMBio, cobrindo Abrolhos/BA, Fernando de Noronha/PE, Parcel Manuel Luís/MA, costa NE).</li>
+  </ul>
+  <p class="small">
+    Pipeline em <code>scripts/32_ingest_mapbiomas_alpha5.py</code>: lê o xlsx,
+    filtra por <code>geocode</code> IBGE, popula os 443 municípios costeiros
+    (438 com dado MapBiomas; 58 sem nem mangue nem restinga, o que é
+    fisicamente correto para alguns trechos costeiros sem esses
+    ecossistemas). Recomputa <code>valor_teeb_global_rs</code> e
+    <code>valor_teeb_brasil_rs</code> nas duas bases, e espelha a base ativa
+    em <code>valor_teeb_rs</code>.
+  </p>
+
+  <h3>Pipeline α₅</h3>
+  <ol>
+    <li>Carrega os coeficientes TEEB (global e brasil) em
+      <code>parametros</code> via <code>07_carregar_parametros.py</code>.</li>
+    <li><code>32_ingest_mapbiomas_alpha5.py</code> lê o xlsx oficial MapBiomas
+      Col 9, filtra classes 5/49/50, e popula <code>ha_manguezal</code> e
+      <code>ha_restinga</code> para os 443 municípios costeiros.</li>
+    <li>Calcula <code>valor_teeb_global_rs</code> e
+      <code>valor_teeb_brasil_rs</code> — persistidos como colunas
+      independentes em <code>alpha5_ecossistemas</code>.</li>
+    <li>Espelha a coluna ativa <code>valor_teeb_rs</code> a partir da base
+      selecionada (<code>parametros.alpha5_base</code>), para que o cálculo
+      de eventos continue lendo uma única coluna.</li>
+    <li>Quando o operador troca a base via
+      <code>/admin/fontes</code> → <strong>α₅ base de valoração</strong>, a
+      função <code>app.calc.set_alpha5_base</code> reescreve
+      <code>valor_teeb_rs</code> e recalcula <code>alpha5_rs</code> /
+      <code>icseiom_rs</code> de todos os eventos persistidos.</li>
+  </ol>
+
+  <div class="callout">
+    <strong>Limitações de α₅.</strong> Recife de coral não entra
+    (<code>ha_recife = 0</code>) porque MapBiomas Col 9 é terrestrial-only;
+    a correção vai via Allen Coral Atlas ou Atlas dos Recifes ICMBio em
+    passo futuro. Recife e restinga não têm valoração brasileira específica
+    publicada — ambos usam Costanza em qualquer das duas bases. A
+    contribuição do α₅ ao ICSEIOM varia ~17x entre as bases (R$ 53,81B
+    global vs R$ 3,11B brasil), dominada pelo manguezal cujo coeficiente
+    CCARBON brasil é 46x menor que o Costanza global.
+  </div>
+
+  <h2 id="kshare">k — Share da LGAF no mérito coletivo</h2>
+  <p>
+    O <code>k</code> na equação do ICSEIOM
+    (<code>k·(α₁+…+α₅)+β−χ</code>) <strong>não é um fator estatístico
+    genérico de calibração</strong> — ele representa explicitamente a
+    <strong>fração do lucro social evitado atribuível à LGAF</strong>. Os
+    <code>(1−k)</code> restantes vão para os demais atores da cadeia de
+    resposta: IBAMA fiscalizando, ICMBio protegendo unidades de conservação,
+    Marinha contendo o derrame, Defesa Civil evacuando, municípios alertando
+    a população.
+  </p>
+  <p>
+    A LGAF contribui com <strong>identificação forense</strong> do
+    poluente — sem essa identificação, nem a multa, nem o alerta sanitário,
+    nem a resposta coordenada são disparados com a celeridade e a
+    especificidade necessárias. O mesmo <code>k</code> aplica-se
+    uniformemente a <em>todas</em> as parcelas α₁..α₅: é o share da LGAF em
+    cada camada do lucro evitado, não apenas em uma delas.
+  </p>
+  <p>
+    O valor atual <code>k = 0,30</code> é <strong>placeholder</strong> a ser
+    calibrado empiricamente pelo painel Delphi descrito em
+    <em>ICSEIOM_proposta.docx</em> (3 internos IEAPM/CHM/DHN + 3 externos
+    UFRJ/INPE/IBAMA/ANP, critério 75% ≥ 4 na escala Likert). Até lá, todos
+    os valores de ICSEIOM neste sistema devem ser lidos como estimativas
+    de ordem de grandeza, não como valores institucionalmente homologados.
+  </p>
+
+  <h2 id="fontes">Fontes de dados</h2>
+  <p class="sub-ev">
+    Lista dinâmica — cada script de ingestão registra sua própria entrada
+    aqui. A safra mostra o período efetivamente baixado.
+  </p>
+  {% if fontes %}
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>Órgão</th>
+        <th>Fonte</th>
+        <th>Safra</th>
+        <th>Uso no ICSEIOM</th>
+        <th>Links</th>
+        <th>Atualizado em</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in fontes %}
+      <tr>
+        <td>{{ f.orgao or '—' }}</td>
+        <td>
+          <strong>{{ f.nome_humano or f.fonte }}</strong>
+          {% if f.observacoes_metodologicas %}
+            <br><small class="muted">{{ f.observacoes_metodologicas }}</small>
+          {% endif %}
+        </td>
+        <td>{{ f.ultima_safra or '—' }}</td>
+        <td>{{ f.descricao_uso or '—' }}</td>
+        <td>
+          {% if f.url %}<a href="{{ f.url }}" target="_blank">dado</a>{% endif %}
+          {% if f.url_portal %}{% if f.url %} · {% endif %}<a href="{{ f.url_portal }}" target="_blank">portal</a>{% endif %}
+          {% if f.script %}<br><small class="muted">{{ f.script }}</small>{% endif %}
+        </td>
+        <td><small>{{ f.atualizado_em or '—' }}</small></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">Nenhuma fonte registrada ainda. Rode os scripts de ingestão em <code>scripts/</code>.</p>
+  {% endif %}
+
+  <h2 id="estimador">Estimador α̂₁</h2>
+
+  <h3>O caminho até a média</h3>
+  <p>
+    A primeira abordagem foi treinar um modelo preditivo de valor-por-auto
+    — LightGBM sobre 57 features (tipo_infracao, norma, pacote SICAFI
+    completo, perfil de infra-óleo, setor PNGC, log-pop, log-PIB per
+    capita, features ANP de incidentes, entre outras). A intuição: dado
+    um auto novo caracterizado por essas features, prever o valor da
+    multa. Treinamos também Ridge como referência linear, um modelo
+    híbrido (mediana por estrato + LGBM no resíduo) e um estimador de
+    média do município com fallback hierárquico.
+  </p>
+  <p>
+    Validação 5-fold (KFold <code>shuffle=True</code>, seed=42) sobre os
+    201 autos do filtro estrito:
+  </p>
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>Método</th>
+        <th class="num">R² médio</th>
+        <th class="num">desvio</th>
+        <th class="num">mín</th>
+        <th class="num">máx</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>LGBM puro (log-valor)</td>
+        <td class="num">+0,030</td>
+        <td class="num">0,363</td>
+        <td class="num">−0,691</td>
+        <td class="num">+0,272</td>
+      </tr>
+      <tr>
+        <td>Baseline mediana por estrato (setor × tipo_infracao)</td>
+        <td class="num">−0,077</td>
+        <td class="num">0,358</td>
+        <td class="num">−0,728</td>
+        <td class="num">+0,275</td>
+      </tr>
+      <tr>
+        <td>Híbrido (mediana + resíduo LGBM)</td>
+        <td class="num">−0,097</td>
+        <td class="num">0,488</td>
+        <td class="num">−1,067</td>
+        <td class="num">+0,214</td>
+      </tr>
+      <tr>
+        <td>Média log do município (hierárquico)</td>
+        <td class="num">−0,124</td>
+        <td class="num">0,339</td>
+        <td class="num">−0,626</td>
+        <td class="num">+0,223</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    Todos os intervalos cruzam zero. Um stress test do LGBM puro com
+    10 seeds (1..10) produziu R² entre −0,276 e +0,461 — a primeira
+    rodada que mostrou R² = 0,509 com seed=42 foi outlier favorável,
+    não sinal. Nenhum dos quatro métodos passa num critério rigoroso
+    de capacidade preditiva estável.
+  </p>
+
+  <h3>O que o R² estava medindo errado</h3>
+  <p>
+    O problema não estava no método, estava na métrica. R² mede
+    "quanto o estimador acerta o valor de <strong>um auto individual</strong>".
+    Mas o ICSEIOM não precisa disso. A grandeza de interesse é o valor
+    <strong>esperado</strong> de multa por auto no município, i.e.
+    <em>E[valor | município]</em>: quando um derrame contrafactual é
+    evitado em X, quanto seria a multa esperada?
+  </p>
+  <p>
+    O estimador não-viesado de E[X] é a <strong>média amostral</strong>.
+    A variância alta dos autos em torno dessa média — um auto pode ser
+    R$ 5 mil e o próximo do mesmo município R$ 1 milhão — é
+    <em>característica real do processo sancionador</em>, não erro do
+    estimador. Tentar prever o valor individual é tentar capturar esse
+    ruído, e é por isso que todas as quatro abordagens chegam em R²
+    próximo de zero: não há sinal a mais de preço por trás das features
+    — há multas grandes e pequenas coexistindo no mesmo município, no
+    mesmo ano, sob a mesma norma e mesmo tipo.
+  </p>
+  <p>
+    A média, em contrapartida, é exatamente o estimador ótimo para o
+    que o ICSEIOM precisa: o valor esperado da sanção evitada. Não
+    tenta explicar cada auto individual; compactna a distribuição
+    observada num único número representativo.
+  </p>
+
+  <h3>Definição formal</h3>
+  <p>
+    Seja <code>V_i</code> o valor real (corrigido por IPCA) do i-ésimo auto
+    do filtro estrito no município <code>m</code>. Definimos:
+  </p>
+  <pre class="eq">α̂₁(m) = exp( (1/n_m) · Σᵢ log(V_i) )   para n_m ≥ 1</pre>
+  <p>
+    ou seja, a <strong>média geométrica</strong> das multas históricas
+    do município. A média geométrica é preferível à aritmética porque
+    <code>log(V)</code> é aproximadamente normal (simétrica, caudas
+    bem-comportadas) enquanto <code>V</code> tem cauda longa à direita
+    — na escala original, a aritmética fica instável a um único auto
+    extremo, enquanto a geométrica absorve com elegância.
+  </p>
+
+  <h3>Fallback hierárquico</h3>
+  <p>
+    Dos 443 municípios costeiros, apenas <strong>20 têm ao menos um auto</strong>
+    no filtro estrito. Para os 423 restantes, usamos a média do grupo
+    de municípios mais próximo, seguindo a hierarquia:
+  </p>
+  <ol>
+    <li><strong>via=muni</strong> — o município tem n_m ≥ 1 no filtro
+      estrito. Usa a própria média geométrica.</li>
+    <li><strong>via=setor_infra</strong> — mesmo setor PNGC (1..5) e
+      mesmo perfil de infra-óleo, definido pela tupla (refinaria,
+      terminal, duto, campo E&amp;P). Se existe ≥1 auto em municípios
+      com essa mesma combinação, usa a média log deles.</li>
+    <li><strong>via=setor</strong> — mesmo setor PNGC. Último fallback
+      antes do global.</li>
+    <li><strong>via=global</strong> — média log de todos os 201 autos.
+      Não é usado na distribuição atual (setor já cobre tudo).</li>
+  </ol>
+
+  <h3>Distribuição da estimativa (443 costeiros)</h3>
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>Via</th>
+        <th class="num">n municípios</th>
+        <th class="num">α̂₁ médio</th>
+        <th class="num">α̂₁ mínimo</th>
+        <th class="num">α̂₁ máximo</th>
+        <th class="num">n_base médio</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>muni</td>
+        <td class="num">20</td>
+        <td class="num">R$ 260.444</td>
+        <td class="num">R$ 2.987</td>
+        <td class="num">R$ 2.611.322</td>
+        <td class="num">10,1</td>
+      </tr>
+      <tr>
+        <td>setor_infra</td>
+        <td class="num">135</td>
+        <td class="num">R$ 113.483</td>
+        <td class="num">R$ 27.318</td>
+        <td class="num">R$ 1.253.719</td>
+        <td class="num">7,9</td>
+      </tr>
+      <tr>
+        <td>setor</td>
+        <td class="num">288</td>
+        <td class="num">R$ 173.851</td>
+        <td class="num">R$ 27.318</td>
+        <td class="num">R$ 245.843</td>
+        <td class="num">5,6</td>
+      </tr>
+      <tr>
+        <td>global</td>
+        <td class="num">0</td>
+        <td class="num">—</td>
+        <td class="num">—</td>
+        <td class="num">—</td>
+        <td class="num">—</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="sub-ev">
+    Persistência: tabela <code>mb_alpha1_estimativa</code>, uma linha por
+    município costeiro, com colunas <code>alpha1_hat</code>,
+    <code>via</code>, <code>n_base</code> e <code>log_media</code>.
+    Implementação em <code>scripts/25_alpha1_estimador_final.py</code>.
+  </p>
+
+  <h3>Por que não reportamos R² do estimador final</h3>
+  <p>
+    A média amostral <strong>é</strong> o estimador ótimo (mínima variância,
+    não-viesado) para E[X]. Medir R² do estimador contra os próprios autos
+    observados seria circular — o R² da média contra os pontos individuais
+    é trivialmente zero por construção (a SSR iguala a SST quando a
+    previsão é a média). A métrica correta é o <strong>erro-padrão da
+    média geométrica</strong>, que para os 20 municípios com histórico
+    (n_m ≈ 10 em média) fica em torno de <code>±0,5</code> na escala log
+    — um fator de aproximadamente <strong>1,6× na escala original</strong>,
+    aceitável como ponto de partida num painel Delphi.
+  </p>
+
+  <h3>Os scripts de machine learning como apêndice</h3>
+  <p>
+    Os scripts <code>17_treinar_modelos_alpha1.py</code>,
+    <code>23_alpha1_hibrido.py</code> e <code>24_alpha1_media_muni.py</code>
+    ficam preservados no repositório como <strong>apêndice técnico do
+    caminho percorrido</strong>. Se no futuro o universo crescer
+    (por acesso aos cadastros da DPC/Capitanias dos Portos e dos órgãos
+    ambientais estaduais), o exercício de modelagem preditiva pode ser
+    retomado com amostra maior.
+  </p>
+
+  <h2 id="limitacoes">Limitações conhecidas</h2>
+  <ul>
+    <li><strong>Placeholders a validar por Delphi:</strong> k = 0,30;
+      f_apropriacao = 0,30; p_autuacao_erronea = 0,25; recuperacao_defesa = 0,60;
+      custo_analise_externa = R$ 35.000 por evento.</li>
+    <li><strong>α₂, α₃, α₄ e α₅ com dados reais (α₅ com áreas preliminares).</strong>
+      α₂ combina aquicultura SIDRA 3940 (340 municípios, valor em R$
+      direto do IBGE) com pesca extrativa BEPA/MPA (toneladas por UF,
+      distribuídas por município com pesos diferenciados por setor:
+      artesanal via n_pescadores SisRGP, industrial via n_armadores
+      SisRGP). Os preços de lagosta (R$ 80/kg, CEAGESP) e
+      siri/caranguejo (R$ 15/kg, CEAGESP) são estimativas de atacado;
+      a distribuição por pescadores/armadores é proxy, não produção
+      real municipal. Toneladas da aquicultura disponíveis apenas para
+      produtos em kg (peixes, camarão, ostras/mexilhões), não para
+      alevinos/larvas/sementes (unidade milheiros).
+      α₃ usa salários CNAE turismo (SIDRA 6450) × δ_costeiro (Sol e Praia
+      MTur / QL Economia Azul Marinha). O ranking Sol e Praia é auto-declarado
+      pelo gestor municipal. V_tur captura apenas salários formais, não a
+      economia informal do turismo.
+      α₄ usa população × taxas conservadoras da literatura (DWH, Prestige)
+      × custos SUS reais; é somada ao ICSEIOM apenas quando o evento é
+      poluente. As taxas de procura por atendimento não têm validação
+      direta para a costa brasileira.
+      α₅ usa áreas reais por município via MapBiomas Col 9 (manguezal e
+      restinga, safra 2023, 443 costeiros, DOI 10.58053/MapBiomas/VEJDZC)
+      combinadas com valoração dupla (Costanza 2014 global vs CCARBON/USP
+      brasil). Recife de coral permanece zerado até ingestão de fonte
+      marinha específica (Allen Coral Atlas ou Atlas dos Recifes ICMBio).
+      Ver <a href="#alpha5">seção α₅</a>.</li>
+    <li><strong>Amostra pequena (n=201, 20 municípios).</strong>
+      Apenas 20 dos 443 costeiros têm histórico direto de autos IBAMA-óleo
+      no filtro estrito — o fallback por setor PNGC é a regra (423 de 443
+      municípios). Para 135 deles o fallback usa setor + perfil de infra
+      (grupo mais específico); para 288 usa só o setor. A precisão local
+      da estimativa depende da representatividade desses grupos.</li>
+    <li><strong>Caminho preditivo descartado:</strong> abordagens baseadas
+      em LightGBM, Ridge, híbrido (mediana + resíduo) e média hierárquica
+      do município falharam em produzir R² estável sob 5-fold CV
+      (média +0,03, desvio 0,36). A média geométrica foi adotada
+      porque é exatamente o estimador ótimo para E[valor | município],
+      que é o que o ICSEIOM precisa — e não para "prever o valor do
+      próximo auto", que era a métrica errada. Ver seção
+      <a href="#estimador">Estimador α̂₁</a>.</li>
+    <li><strong>Universo restrito a óleo:</strong> o estimador usa apenas
+      os 201 autos que passaram no filtro de dois trilhos (artigo
+      óleo-específico ou descrição casa whitelist). Infrações ambientais
+      fora do escopo óleo (flora, fauna, pesca, CTF) não entram.</li>
+    <li><strong>Cobertura restrita a um dos três autuadores legais.</strong>
+      O SIFISC contém apenas autos IBAMA. Autuações da Marinha (DPC e
+      Capitanias dos Portos, via Lei 9966/00 arts 25-26) e de órgãos
+      estaduais ambientais não estão incluídas. α₁ é, portanto, um proxy
+      de multa IBAMA de referência, não a multa que o autuador natural do
+      incidente (Capitania dos Portos, na maioria dos casos em águas
+      jurisdicionais) aplicaria. Obter os cadastros da DPC e dos órgãos
+      estaduais é prioridade de melhoria metodológica.</li>
+  </ul>
+
+  <h2 id="reproduzir">Como reproduzir</h2>
+  <pre class="eq">docker compose up -d --build
+# α₁ — multa ambiental
+docker compose exec icseiom python scripts/08_baixar_malha_ibge.py
+docker compose exec icseiom python scripts/09_marcar_costeiros.py
+docker compose exec icseiom python scripts/10_ingest_alpha1_mb_ibama.py --download
+docker compose exec icseiom python scripts/21_filtrar_alpha1_oleo.py
+docker compose exec icseiom python scripts/25_alpha1_estimador_final.py
+# α₂ — pesca (aquicultura + extrativa)
+docker compose exec icseiom python scripts/30_ingest_alpha2_pesca.py          # SIDRA 3940
+docker compose exec icseiom python scripts/31_ingest_alpha2_bepa.py \
+  --bepa CAMINHO/Banco_reconstrucao_marinha*.csv --rgp CAMINHO/Pescador/
+# α₃ — turismo costeiro (dados reais: SIDRA 6450 + MTur + Economia Azul)
+docker compose exec icseiom python scripts/04_ingest_alpha3_turismo.py --ano 2021
+# α₄ — saúde (dados reais: SIH/SUS + taxas conservadoras DWH/Prestige)
+docker compose exec icseiom python scripts/05_ingest_alpha4_saude.py --ano 2023
+# α₅ — ecossistemas (áreas reais MapBiomas Col 9 + valoração dupla)
+# 1. Baixe o xlsx oficial do MapBiomas (68 MB, uma vez):
+mkdir -p data/mapbiomas
+curl -sL "https://data.mapbiomas.org/api/access/datafile/179" \
+  -o data/mapbiomas/mapbiomas_col9_cobertura_municipio.xlsx
+# 2. Carrega coeficientes TEEB (global + brasil) em parametros:
+docker compose exec icseiom python scripts/07_carregar_parametros.py --ano 2024
+# 3. Ingere hectares reais de mangue e restinga (443 costeiros):
+docker compose exec icseiom python scripts/32_ingest_mapbiomas_alpha5.py --ano 2024 --safra-mapbiomas 2023
+# 4. (opcional) Trocar base de valoração ativa — também disponível em /admin/fontes:
+docker compose exec icseiom python -c "from app.calc import set_alpha5_base; set_alpha5_base('brasil')"</pre>
+
+</div>
+{% endblock %}
