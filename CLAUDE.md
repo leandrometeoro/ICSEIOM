@@ -410,22 +410,17 @@ Coisas que estão no projeto como **placeholder** ou **simplificação**:
 8. **dV/dt do balanço de volume não está no ICSEIOM** — é outra linha de
    pesquisa do Leandro (tese de oceanografia física), não se mistura aqui.
 
-9. **Códigos IBGE errados na seed de `municipios_costeiros` (bug sério).**
-   Dos 61 municípios da seed, **51 têm `code_muni` que aponta para outro
-   município no IBGE** (nome e centróide corretos, mas o número do código
-   pertence a outra cidade). Exemplos: Ipojuca (2607901) na verdade é
-   Jaboatão; Cairu (2908408) é Conceição do Coité; Porto Seguro (2933307)
-   é Vitória da Conquista; Ilhéus (2917509) nem existe no IBGE. Impacto:
-   quando `calc.py` calcula um evento e itera sobre os 61, ele faz lookup
-   de α₂/₃/₄/₅ pelo `code_muni` — e essas tabelas foram populadas pelos
-   scripts 30..34 usando códigos IBGE corretos de `municipios_brasil`.
-   Resultado: o evento junta área de Jaboatão com nome "Ipojuca", etc.
-   Os scripts 32 (MapBiomas) e 33 (UNEP Reefs) já operam sobre
-   `municipios_brasil.is_costeiro=1` e não sofrem desse bug. **Correção
-   pendente**: consultar `municipios_brasil` por `nome+uf` e reescrever
-   `municipios_costeiros.code_muni` com os códigos IBGE corretos; depois
-   auditar os eventos persistidos (se houver) para recalcular. Adiado
-   até revisão explícita porque afeta qualquer evento já registrado.
+9. **Códigos IBGE da seed de `municipios_costeiros` — RESOLVIDO (2026-04-12).**
+   41 dos 61 `code_muni` apontavam para outro município no IBGE (nome e
+   centróide corretos, mas código errado). Exemplos históricos: Ipojuca
+   (2607901→2607208), Porto Seguro (2933307→2925303), Ilhéus (2917509→2913606),
+   Cabo Frio (3301009→3300704), "Guaratuba/SP" (3518701→4109609 Guaratuba/PR).
+   Correção aplicada via lookup `nome+uf` contra `municipios_brasil` (IBGE
+   Malhas Territoriais 2022), com padrão UPDATE em 2 fases (velho→TMP→novo)
+   para resolver colisões de PK (Cabo Frio↔Arraial do Cabo, Guarujá↔Guaratuba).
+   Guaratuba/PR também teve lat/lon corrigidos (estavam ~410 km off). Seed
+   em `scripts/01_carregar_municipios.py` reescrita para refletir códigos
+   corretos. Nenhum evento persistido precisou de recálculo (base vazia).
 
 ---
 
