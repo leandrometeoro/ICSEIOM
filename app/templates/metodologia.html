@@ -76,7 +76,7 @@
       <tr><td>α₂</td><td>Pesca (produção aquícola + extrativa marinha)</td><td>dados reais: SIDRA 3940 (aquicultura) + BEPA/MPA (extrativa, por UF, distribuída por município via SisRGP)</td></tr>
       <tr><td>α₃</td><td>Turismo costeiro (salários CNAE serviços turismo × fator de dependência costeira)</td><td>dados reais: SIDRA 6450 (CEMPRE, CNAE 55+56+79+93) × δ_costeiro (MTur Sol e Praia + QL Economia Azul/Marinha)</td></tr>
       <tr><td>α₄</td><td>Saúde (custo SUS evitado, CIDs T52/T65/L23/L24/J68)</td><td>dados reais: custos SIH/SUS 2023 × taxas conservadoras da literatura (DWH, Prestige), contabilizado apenas quando o evento é poluente</td></tr>
-      <tr><td>α₅</td><td>Ecossistemas (manguezal, recife, restinga)</td><td>dados reais: áreas MapBiomas Col 9 (safra 2023, 443 municípios) + valoração dupla Costanza 2014 global / CCARBON/USP brasil; recife=0 até ingestão de fonte marinha</td></tr>
+      <tr><td>α₅</td><td>Ecossistemas (manguezal, recife, restinga)</td><td>dados reais: manguezal e restinga via MapBiomas Col 9 (safra 2023), recife de coral via UNEP-WCMC v4.1 (atribuição curada em 4 âncoras), valoração dupla Costanza 2014 global / CCARBON/USP brasil, 443 municípios</td></tr>
       <tr><td>β</td><td>Receitas LGAF</td><td>placeholder</td></tr>
       <tr><td>χ</td><td>Custos LGAF</td><td>placeholder</td></tr>
       <tr><td>k</td><td><strong>Share LGAF</strong> no mérito coletivo</td><td>0,30 (placeholder, calibração Delphi pendente)</td></tr>
@@ -869,7 +869,7 @@
   <ul>
     <li><strong>Manguezal</strong>: classe MapBiomas <code>5</code> (Mangue), safra 2023. Total nacional entre os 443 costeiros: <strong>1.037.364 ha</strong>. Lideres: Soure/PA 43.099 ha (Marajó), São Luís/MA 8.479 ha, Alcântara/MA 2.844 ha, Santos/SP 2.374 ha, Rio de Janeiro/RJ 2.364 ha.</li>
     <li><strong>Restinga</strong>: soma das classes <code>49</code> (Restinga Arbórea) e <code>50</code> (Restinga Herbácea), safra 2023. Total nacional: <strong>810.611 ha</strong>.</li>
-    <li><strong>Recife de coral</strong>: <code>ha_recife = 0</code>. A Coleção 9 é land cover terrestre e não cobre ecossistemas marinhos. <strong>TODO</strong>: ingerir fonte específica (Allen Coral Atlas ou Atlas dos Recifes de Coral do ICMBio, cobrindo Abrolhos/BA, Fernando de Noronha/PE, Parcel Manuel Luís/MA, costa NE).</li>
+    <li><strong>Recife de coral</strong>: <strong>UNEP-WCMC Global Distribution of Coral Reefs v4.1</strong> (DOI <code>10.34892/t2wk-5t34</code>), baixado via ArcGIS REST da camada oficial. 11 polígonos cobrindo a costa brasileira, total <strong>697,57 km² = 69.757 ha</strong>. Atribuição curada por bbox de região (centróides de municípios falham porque ficam no interior enquanto os recifes estão offshore): Banco de Abrolhos → <em>Caravelas/BA</em> (57.151 ha), Costa dos Corais APA → <em>Maragogi/AL</em> (11.119 ha), Trindade/Martim Vaz → <em>Vitória/ES</em> (1.273 ha), Parcel Manuel Luís → <em>Cururupu/MA</em> (215 ha).</li>
   </ul>
   <p class="small">
     Pipeline em <code>scripts/32_ingest_mapbiomas_alpha5.py</code>: lê o xlsx,
@@ -888,6 +888,16 @@
     <li><code>32_ingest_mapbiomas_alpha5.py</code> lê o xlsx oficial MapBiomas
       Col 9, filtra classes 5/49/50, e popula <code>ha_manguezal</code> e
       <code>ha_restinga</code> para os 443 municípios costeiros.</li>
+    <li><code>34_carregar_centroides_ibge.py</code> popula
+      <code>municipios_brasil.lat_centro/lon_centro</code> para os 5570
+      municípios a partir de <code>app/static/data/municipios_br.geojson</code>
+      (média dos vértices do anel externo). Desbloqueia nearest-neighbor
+      espacial sem depender da seed dos 61.</li>
+    <li><code>33_ingest_unep_reefs_alpha5.py</code> lê o geojson UNEP-WCMC
+      v4.1 (baixado uma vez via ArcGIS REST para a bbox brasileira) e
+      atribui cada polígono de recife à sua região curada
+      (Abrolhos/Costa dos Corais/Trindade/Parcel Manuel Luís), somando
+      km² em <code>ha_recife</code> do município-âncora oficial.</li>
     <li>Calcula <code>valor_teeb_global_rs</code> e
       <code>valor_teeb_brasil_rs</code> — persistidos como colunas
       independentes em <code>alpha5_ecossistemas</code>.</li>
@@ -902,14 +912,17 @@
   </ol>
 
   <div class="callout">
-    <strong>Limitações de α₅.</strong> Recife de coral não entra
-    (<code>ha_recife = 0</code>) porque MapBiomas Col 9 é terrestrial-only;
-    a correção vai via Allen Coral Atlas ou Atlas dos Recifes ICMBio em
-    passo futuro. Recife e restinga não têm valoração brasileira específica
-    publicada — ambos usam Costanza em qualquer das duas bases. A
-    contribuição do α₅ ao ICSEIOM varia ~17x entre as bases (R$ 53,81B
-    global vs R$ 3,11B brasil), dominada pelo manguezal cujo coeficiente
-    CCARBON brasil é 46x menor que o Costanza global.
+    <strong>Limitações de α₅.</strong> Recife e restinga não têm valoração
+    brasileira específica publicada — ambos usam Costanza em qualquer das
+    duas bases. A atribuição de recife é em 4 âncoras municipais (uma por
+    região fisiográfica reconhecida) em vez de distribuída pela costa toda;
+    é defensável porque os 11 polígonos UNEP cobrem regiões bem delimitadas
+    com municípios-sede oficiais (Caravelas para PARNA Abrolhos, Maragogi
+    para APA Costa dos Corais, etc.), mas significa que o α₅ de recife fica
+    concentrado em apenas 4 dos 443 costeiros. A contribuição do α₅ ao
+    ICSEIOM varia ~11x entre as bases (R$ 55,59B global vs R$ 4,89B brasil),
+    dominada pelo manguezal cujo coeficiente CCARBON brasil é 46x menor que
+    o Costanza global.
   </div>
 
   <h2 id="kshare">k — Share da LGAF no mérito coletivo</h2>
@@ -1212,12 +1225,11 @@
       × custos SUS reais; é somada ao ICSEIOM apenas quando o evento é
       poluente. As taxas de procura por atendimento não têm validação
       direta para a costa brasileira.
-      α₅ usa áreas reais por município via MapBiomas Col 9 (manguezal e
-      restinga, safra 2023, 443 costeiros, DOI 10.58053/MapBiomas/VEJDZC)
-      combinadas com valoração dupla (Costanza 2014 global vs CCARBON/USP
-      brasil). Recife de coral permanece zerado até ingestão de fonte
-      marinha específica (Allen Coral Atlas ou Atlas dos Recifes ICMBio).
-      Ver <a href="#alpha5">seção α₅</a>.</li>
+      α₅ usa áreas reais por município: mangue e restinga via MapBiomas
+      Col 9 (safra 2023, DOI 10.58053/MapBiomas/VEJDZC) e recife de coral
+      via UNEP-WCMC v4.1 (DOI 10.34892/t2wk-5t34) com atribuição curada
+      em 4 âncoras. Valoração dupla (Costanza 2014 global vs CCARBON/USP
+      brasil). Ver <a href="#alpha5">seção α₅</a>.</li>
     <li><strong>Amostra pequena (n=201, 20 municípios).</strong>
       Apenas 20 dos 443 costeiros têm histórico direto de autos IBAMA-óleo
       no filtro estrito — o fallback por setor PNGC é a regra (423 de 443
@@ -1271,7 +1283,11 @@ curl -sL "https://data.mapbiomas.org/api/access/datafile/179" \
 docker compose exec icseiom python scripts/07_carregar_parametros.py --ano 2024
 # 3. Ingere hectares reais de mangue e restinga (443 costeiros):
 docker compose exec icseiom python scripts/32_ingest_mapbiomas_alpha5.py --ano 2024 --safra-mapbiomas 2023
-# 4. (opcional) Trocar base de valoração ativa — também disponível em /admin/fontes:
+# 4. Popula centroides IBGE em municipios_brasil (uma vez, 5570 munis):
+docker compose exec icseiom python scripts/34_carregar_centroides_ibge.py
+# 5. Ingere recife de coral via UNEP-WCMC v4.1 (697,57 km² em 4 âncoras):
+docker compose exec icseiom python scripts/33_ingest_unep_reefs_alpha5.py --ano 2024
+# 6. (opcional) Trocar base de valoração ativa — também disponível em /admin/fontes:
 docker compose exec icseiom python -c "from app.calc import set_alpha5_base; set_alpha5_base('brasil')"</pre>
 
 </div>

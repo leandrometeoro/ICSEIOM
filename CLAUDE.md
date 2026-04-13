@@ -281,7 +281,7 @@ def ingest_real():   # dados reais (implementado para α₂ e α₃)
 | α₂ | **Real** | 30 + 31 | 440 | R$ 53,1B (2013-2024) |
 | α₃ | **Real** | 04 | 295 | R$ 7,9B (2021) |
 | α₄ | **Real** | 05 | 443 | R$ 1,12B (2023) |
-| α₅ | **Real (MapBiomas Col 9) + dupla valoração** | 06 + 32 | 443 | R$ 53,81B global / R$ 3,11B brasil |
+| α₅ | **Real (MapBiomas Col 9 + UNEP-WCMC Reefs) + dupla valoração** | 06 + 32 + 33 + 34 | 443 | R$ 55,59B global / R$ 4,89B brasil |
 
 **α₂ pesca** (`scripts/30_ingest_alpha2_pesca.py` + `scripts/31_ingest_alpha2_bepa.py`):
 - Aquicultura: SIDRA 3940 (var 215 valor, var 4146 toneladas por produto em kg)
@@ -309,17 +309,23 @@ def ingest_real():   # dados reais (implementado para α₂ e α₃)
 - Populacao: municipios_costeiros.pop_2022 (61) + mb_muni_socio_anual (443)
 - Referencias: Sandifer et al. (2014, DWH), Zock et al. (2007, Prestige), Soares et al. (2020, BR 2019)
 
-**α₅ ecossistemas** (`scripts/06_ingest_alpha5_ecossistemas.py` + `scripts/32_ingest_mapbiomas_alpha5.py`):
+**α₅ ecossistemas** (`scripts/06_ingest_alpha5_ecossistemas.py` + `32_ingest_mapbiomas_alpha5.py` + `33_ingest_unep_reefs_alpha5.py` + `34_carregar_centroides_ibge.py`):
 - `α₅(muni) = ha_mang × coef_mang + ha_recife × coef_recife + ha_restinga × coef_restinga`
-- **Áreas (ha) reais por município**: MapBiomas Brasil Coleção 9 (DOI `10.58053/MapBiomas/VEJDZC`, safra 2023), arquivo `data/mapbiomas/mapbiomas_col9_cobertura_municipio.xlsx` (68 MB, MD5 `e999cf1d7c74445a162f9c615128a119`, baixado via `https://data.mapbiomas.org/api/access/datafile/179`). Classes usadas: `5` (Mangue) → `ha_manguezal`, `49` (Restinga Arbórea) + `50` (Restinga Herbácea) somadas → `ha_restinga`. Script `32_ingest_mapbiomas_alpha5.py` lê o xlsx, filtra por `geocode` IBGE, popula os 443 costeiros (438 com dado; 58 sem mangue nem restinga, o que é fisicamente correto — ex: municípios costeiros gaúchos sem manguezal).
-- **Totais reais**: 1.037.364 ha mangue + 810.611 ha restinga entre os 443 costeiros. Soure/PA lidera com 43.099 ha de mangue (Marajó); São Luís 8.479 ha; Alcântara 2.844 ha; Santos 2.374 ha; Rio de Janeiro 2.364 ha.
-- **Recife de coral**: `ha_recife = 0`. A Coleção 9 é land cover terrestre e não cobre recifes marinhos. **TODO**: ingerir Allen Coral Atlas (global, 10 m, CC BY 4.0) ou Atlas dos Recifes de Coral ICMBio (Abrolhos/BA, Fernando de Noronha/PE, Parcel Manuel Luís/MA, costa NE).
+- **Mangue + Restinga (ha) reais por município**: MapBiomas Brasil Coleção 9 (DOI `10.58053/MapBiomas/VEJDZC`, safra 2023), arquivo `data/mapbiomas/mapbiomas_col9_cobertura_municipio.xlsx` (68 MB, MD5 `e999cf1d7c74445a162f9c615128a119`, baixado via `https://data.mapbiomas.org/api/access/datafile/179`). Classes: `5` (Mangue) → `ha_manguezal`, `49`+`50` (Restinga) → `ha_restinga`. Script `32` popula os 443 costeiros (438 com dado).
+- **Recife de coral (ha) reais**: UNEP-WCMC Global Distribution of Coral Reefs v4.1 (DOI `10.34892/t2wk-5t34`), baixado via ArcGIS REST `https://data-gis.unep-wcmc.org/server/rest/services/HabitatsAndBiotopes/Global_Distribution_of_Coral_Reefs/FeatureServer/1/query` para a bbox brasileira. 11 polígonos, 697,57 km² = 69.757 ha. Script `33_ingest_unep_reefs_alpha5.py` usa **atribuição curada por bbox de região** (tentativa via centroide de município falha porque centroides ficam no interior enquanto os recifes estão offshore, puxando munis errados como Itacaré/Murici/Lauro de Freitas). As 4 regiões e âncoras oficiais:
+  - **Banco de Abrolhos** (BA) → Caravelas/BA (2906907): 571,51 km² = 57.151 ha
+  - **Costa dos Corais** (APA PE+AL) → Maragogi/AL (2704500): 111,19 km² = 11.119 ha
+  - **Trindade/Martim Vaz** (ilhas oceânicas) → Vitória/ES (3205309): 12,73 km² = 1.273 ha
+  - **Parcel Manuel Luís** (APA, MA) → Cururupu/MA (2103703): 2,15 km² = 215 ha
+- **Centroides IBGE** para todos os 5570 munis em `municipios_brasil.lat_centro/lon_centro`, populados por `34_carregar_centroides_ibge.py` a partir de `app/static/data/municipios_br.geojson` (média dos vértices do anel externo, ok para nearest-neighbor). Desbloqueia scripts espaciais futuros sem depender do seed dos 61.
+- **Totais reais**: 1.037.364 ha mangue + 69.757 ha recife + 810.611 ha restinga entre os 443 costeiros. Soure/PA lidera mangue com 43.099 ha (Marajó); Caravelas/BA lidera recife com 57.151 ha.
 - **Dupla valoração** — duas colunas persistidas por município:
   - `valor_teeb_global_rs`: Costanza et al. 2014 (USD 9.990 manguezal, 5.115 recife, 491 restinga) × 5,0 R$/USD
   - `valor_teeb_brasil_rs`: CCARBON/USP (USD 215 manguezal amazônico) × 5,0; recife e restinga mantêm Costanza por falta de valoração brasileira específica publicada
 - **Coluna ativa** `valor_teeb_rs` espelha a base selecionada em `parametros.alpha5_base` (`'global'` default, ou `'brasil'`). Helper `app.calc.set_alpha5_base(base)` troca a base e recalcula todos os eventos persistidos; UI em `/admin/fontes` tem o toggle.
-- **Totais com dados reais**: base global R$ 53,81B, base brasil R$ 3,11B (~17x, dominado pelo manguezal que é 46x menor na base brasil). A escolha entre bases afeta ICSEIOM pelo fator `k × Δα₅`.
-- Referências: MapBiomas Brasil Col 9 (Souza et al. 2020, *Remote Sensing* 12:2735); Costanza et al. (2014) *Global Environmental Change* 26:152–158; CCARBON/USP Amazônia; Seroa da Motta (Amazônia USD 56–737/ha/ano).
+- **Totais com recife incluído**: base global R$ 55,59B, base brasil R$ 4,89B. Diferença entre bases continua ~11x, dominada pelo manguezal (46x menor na base brasil).
+- **Pipeline completo de ingestão**: `python3 scripts/32_ingest_mapbiomas_alpha5.py && python3 scripts/34_carregar_centroides_ibge.py && python3 scripts/33_ingest_unep_reefs_alpha5.py`. O 34 só precisa rodar uma vez (ou quando `municipios_br.geojson` mudar).
+- Referências: MapBiomas Brasil Col 9 (Souza et al. 2020, *Remote Sensing* 12:2735); UNEP-WCMC et al. (2021) Global distribution of coral reefs v4.1; Costanza et al. (2014) *Global Environmental Change* 26:152–158; CCARBON/USP Amazônia.
 
 Após atualizar qualquer fonte, registrar a nova safra em
 `metadados_atualizacao` via:
@@ -372,9 +378,9 @@ Coisas que estão no projeto como **placeholder** ou **simplificação**:
    α₅ tem escolha de base via `parametros.alpha5_base` ('global'|'brasil'),
    alternável no `/admin/fontes`; o helper `set_alpha5_base` recalcula
    automaticamente todos os eventos persistidos. Áreas (ha) reais por
-   município via MapBiomas Col 9 (manguezal + restinga); recife de coral
-   ainda `ha_recife=0` até ingestão de fonte marinha específica
-   (Allen Coral Atlas ou Atlas dos Recifes ICMBio).
+   município: mangue + restinga via MapBiomas Col 9, recife de coral via
+   UNEP-WCMC v4.1 (atribuição curada por bbox de região em 4 âncoras:
+   Caravelas/BA, Maragogi/AL, Vitória/ES, Cururupu/MA).
 
 3. **Duas tabelas de municípios com cobertura diferente.**
    `municipios_costeiros` tem 61 municípios com geometria (centróide + WKT),
@@ -403,6 +409,23 @@ Coisas que estão no projeto como **placeholder** ou **simplificação**:
 
 8. **dV/dt do balanço de volume não está no ICSEIOM** — é outra linha de
    pesquisa do Leandro (tese de oceanografia física), não se mistura aqui.
+
+9. **Códigos IBGE errados na seed de `municipios_costeiros` (bug sério).**
+   Dos 61 municípios da seed, **51 têm `code_muni` que aponta para outro
+   município no IBGE** (nome e centróide corretos, mas o número do código
+   pertence a outra cidade). Exemplos: Ipojuca (2607901) na verdade é
+   Jaboatão; Cairu (2908408) é Conceição do Coité; Porto Seguro (2933307)
+   é Vitória da Conquista; Ilhéus (2917509) nem existe no IBGE. Impacto:
+   quando `calc.py` calcula um evento e itera sobre os 61, ele faz lookup
+   de α₂/₃/₄/₅ pelo `code_muni` — e essas tabelas foram populadas pelos
+   scripts 30..34 usando códigos IBGE corretos de `municipios_brasil`.
+   Resultado: o evento junta área de Jaboatão com nome "Ipojuca", etc.
+   Os scripts 32 (MapBiomas) e 33 (UNEP Reefs) já operam sobre
+   `municipios_brasil.is_costeiro=1` e não sofrem desse bug. **Correção
+   pendente**: consultar `municipios_brasil` por `nome+uf` e reescrever
+   `municipios_costeiros.code_muni` com os códigos IBGE corretos; depois
+   auditar os eventos persistidos (se houver) para recalcular. Adiado
+   até revisão explícita porque afeta qualquer evento já registrado.
 
 ---
 

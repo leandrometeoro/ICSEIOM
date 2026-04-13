@@ -20,6 +20,11 @@ _MIGRATIONS = [
     # Parametro de texto (alpha5_base='global'|'brasil') precisa de coluna
     # textual, ja que parametros.valor e REAL NOT NULL.
     ("parametros", "valor_texto", "TEXT"),
+    # Centroide IBGE para os 5570 munis (lat/lon), usado por scripts de
+    # ingestao espacial (ex: 33 UNEP reefs) e futuras atribuicoes por
+    # vizinho mais proximo. Populado via scripts/34_carregar_centroides_ibge.py.
+    ("municipios_brasil", "lat_centro", "REAL"),
+    ("municipios_brasil", "lon_centro", "REAL"),
 ]
 _migrated = False
 

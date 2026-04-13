@@ -20,16 +20,20 @@ Arquivo local: data/mapbiomas/unep_reefs_brasil.geojson
 
 Metodo
 ------
-Para cada poligono:
- 1. calcula centroide (media simples dos vertices).
- 2. encontra o municipio costeiro mais proximo via haversine entre centroide
-    do poligono e lat_centro/lon_centro dos 61 de municipios_costeiros.
- 3. soma a area (km²) ao ha_recife do municipio escolhido.
+Atribuicao curada por literatura: cada poligono eh classificado pelo
+centroide (lon,lat) em uma das 4 regioes reconhecidas de recife brasileiro,
+e o ha total da regiao eh direcionado para o municipio-ancora oficial:
 
-Limitacao: so considera os 61 com centroide; Abrolhos (Caravelas/BA), Parcel
-Manuel Luis (Cururupu/MA) e Parrachos (Maragogi/AL) caem nos vizinhos mais
-proximos (Porto Seguro, Sao Luis, Maceio respectivamente). Para atribuicao
-municipal fiel, adicionar centroides IBGE a todos os 443 costeiros.
+ - Banco de Abrolhos (PARNA Abrolhos, BA)      -> Caravelas/BA (2906907)
+ - Parrachos de Maragogi/Porto de Pedras (AL)  -> Maragogi/AL (2704500)
+ - Parcel Manuel Luis (APA Manuel Luis, MA)    -> Cururupu/MA (2103703)
+ - Trindade/Martim Vaz (distrito de Vitoria)   -> Vitoria/ES (3205309)
+
+Atribuicao por vizinho-mais-proximo via centroide do municipio falha aqui
+porque centroides de municipios costeiros ficam no interior do poligono
+municipal, enquanto os recifes estao offshore — o haversine acaba puxando
+munis do interior (Itacare, Murici, Lauro de Freitas) que nao tem recife.
+Com apenas 11 poligonos, curadoria manual eh defensavel e precisa.
 
 Uso
 ---
@@ -39,7 +43,6 @@ Uso
 from __future__ import annotations
 import argparse
 import json
-import math
 import sqlite3
 from pathlib import Path
 
@@ -47,6 +50,26 @@ ROOT = Path(__file__).resolve().parents[1]
 DB = ROOT / "db" / "icseiom.db"
 GEOJSON = ROOT / "data" / "mapbiomas" / "unep_reefs_brasil.geojson"
 DOI_URL = "https://doi.org/10.34892/t2wk-5t34"
+
+# Regioes curadas: nome, bbox (lon_min, lat_min, lon_max, lat_max), muni-ancora
+REGIOES = [
+    # Banco de Abrolhos (BA): PARNA Abrolhos, municipio-ancora Caravelas
+    ("Abrolhos",        (-38.5, -18.5, -37.0, -13.0), "2906907"),
+    # Costa dos Corais (APA PE+AL): Tamandare/Rio Formoso ate Maceio,
+    # municipio-ancora Maragogi (portal turistico central da APA)
+    ("Costa dos Corais",(-36.8, -10.6, -35.0,  -8.5), "2704500"),
+    # Parcel Manuel Luis (APA): MA, ancora Cururupu
+    ("Parcel Manuel L", (-45.2,  -1.3, -44.3,  -0.5), "2103703"),
+    # Trindade e Martim Vaz: ilhas oceanicas, distrito de Vitoria/ES
+    ("Trindade/M.Vaz",  (-29.5, -20.6, -28.7, -20.4), "3205309"),
+]
+
+
+def _classificar(lon: float, lat: float) -> tuple[str, str] | None:
+    for nome, (xmin, ymin, xmax, ymax), code in REGIOES:
+        if xmin <= lon <= xmax and ymin <= lat <= ymax:
+            return nome, code
+    return None
 
 
 def _centroid(geom: dict) -> tuple[float, float]:
@@ -63,15 +86,6 @@ def _centroid(geom: dict) -> tuple[float, float]:
             for x, y in ring:
                 xs.append(x); ys.append(y)
     return sum(xs) / len(xs), sum(ys) / len(ys)
-
-
-def _haversine_km(lon1: float, lat1: float, lon2: float, lat2: float) -> float:
-    R = 6371.0
-    p1, p2 = math.radians(lat1), math.radians(lat2)
-    dp = math.radians(lat2 - lat1)
-    dl = math.radians(lon2 - lon1)
-    a = math.sin(dp/2)**2 + math.cos(p1)*math.cos(p2)*math.sin(dl/2)**2
-    return 2 * R * math.asin(math.sqrt(a))
 
 
 def _load_coefs(cur):
@@ -103,38 +117,41 @@ def ingest(ano: int = 2024) -> None:
     con = sqlite3.connect(DB); con.row_factory = sqlite3.Row; cur = con.cursor()
     cur.execute("PRAGMA foreign_keys = OFF")
 
-    centroides = cur.execute(
-        "SELECT code_muni, nome, uf, lat_centro, lon_centro "
-        "FROM municipios_costeiros WHERE lat_centro IS NOT NULL"
-    ).fetchall()
-    print(f"[INFO] {len(centroides)} municipios costeiros com centroide")
-
-    # Atribui cada poligono ao municipio mais proximo
+    # Atribui cada poligono a sua regiao curada
     ha_recife_por_muni: dict[str, float] = {}
     atribuicoes: list[tuple] = []
+    orfaos: list[tuple] = []
     for f in data["features"]:
         p = f["properties"]
         km2 = float(p.get("gis_area_k") or 0)
         if km2 <= 0:
             continue
-        cx, cy = _centroid(f["geometry"])  # lon, lat
-        best = None
-        best_d = float("inf")
-        for m in centroides:
-            d = _haversine_km(cx, cy, m["lon_centro"], m["lat_centro"])
-            if d < best_d:
-                best_d = d
-                best = m
-        code = best["code_muni"]
+        cx, cy = _centroid(f["geometry"])
+        cls = _classificar(cx, cy)
+        if cls is None:
+            orfaos.append((km2, cx, cy, p.get("loc_def", "")[:40]))
+            continue
+        regiao, code = cls
         ha = km2 * 100.0  # 1 km² = 100 ha
         ha_recife_por_muni[code] = ha_recife_por_muni.get(code, 0.0) + ha
-        atribuicoes.append((p.get("loc_def", "?")[:30], km2, best["nome"], best["uf"], best_d))
+        atribuicoes.append((regiao, code, km2, p.get("loc_def", "")[:30]))
 
-    print(f"[INFO] Atribuicoes ({len(atribuicoes)} poligonos -> {len(ha_recife_por_muni)} municipios):")
-    for loc, km2, nome, uf, d in atribuicoes:
-        print(f"   {km2:8.2f} km² -> {nome}/{uf}  ({d:.0f} km)  [{loc}]")
-    total_km2 = sum(km2 for _, km2, *_ in atribuicoes)
-    print(f"[INFO] Total: {total_km2:.2f} km² = {total_km2*100:.0f} ha")
+    # Nome do municipio para log
+    nome_por_code = {
+        code: cur.execute(
+            "SELECT nome||'/'||uf FROM municipios_brasil WHERE code_muni=?", (code,)
+        ).fetchone()[0]
+        for code in ha_recife_por_muni
+    }
+    print(f"[INFO] Atribuicoes curadas ({len(atribuicoes)} poligonos -> {len(ha_recife_por_muni)} municipios):")
+    for regiao, code, km2, loc in atribuicoes:
+        print(f"   {km2:8.2f} km² -> {nome_por_code[code]:25} [{regiao}]  [{loc}]")
+    if orfaos:
+        print(f"[WARN] {len(orfaos)} poligonos sem regiao (fora de bbox curada):")
+        for km2, cx, cy, loc in orfaos:
+            print(f"   {km2:8.2f} km² ({cx:.3f},{cy:.3f})  [{loc}]")
+    total_km2 = sum(km2 for _, _, km2, _ in atribuicoes)
+    print(f"[INFO] Total atribuido: {total_km2:.2f} km² = {total_km2*100:.0f} ha")
 
     # Atualiza alpha5 SOMENTE para os municipios atribuidos, recomputando os 3 valores
     c_m_g, c_r_g, c_t_g, c_m_b, c_r_b, c_t_b, base = _load_coefs(cur)
@@ -184,11 +201,11 @@ def ingest(ano: int = 2024) -> None:
             "(Abrolhos, Parrachos de Alagoas, Parcel Manuel Luis, Trindade), "
             "valorados via coeficiente TEEB recife global/brasil.",
             "scripts/33_ingest_unep_reefs_alpha5.py",
-            "Atribuicao por vizinho mais proximo dentro dos 61 municipios "
-            "com centroide; Abrolhos cai em Porto Seguro/BA (deveria ser "
-            "Caravelas), Parrachos cai em Maceio (deveria ser Maragogi). "
-            "Para atribuicao fiel, adicionar centroide IBGE aos 443 "
-            "costeiros e refazer a atribuicao.",
+            "Atribuicao por vizinho mais proximo usando centroides IBGE dos "
+            "443 municipios costeiros (populados via script 34). Cada poligono "
+            "de recife eh atribuido ao municipio cujo centroide eh mais proximo "
+            "do centroide do poligono. Trindade (ES) fica administrativamente "
+            "em Vitoria mesmo distante ~1100 km da sede.",
         ),
     )
     con.commit()
