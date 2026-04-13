@@ -30,6 +30,90 @@
   </form>
   <p class="small">Base atual: <strong>{{ alpha5_base }}</strong></p>
 
+  <h2>χ — Custos LGAF por categoria</h2>
+  <p class="small">Totais anuais por categoria. Quando um evento é registrado sem sobrescrever χ, o total do ano (soma das categorias) é dividido por 10 (rateio) e entra como χ do evento. Se algum valor for informado direto no formulário do evento, ignora estas entradas.</p>
+  {% if chi_rows %}
+  <table class="tbl">
+    <thead><tr><th>Ano</th><th>Categoria</th><th class="num">Valor (R$)</th><th>Descrição</th><th>Fonte</th><th></th></tr></thead>
+    <tbody>
+    {% for r in chi_rows %}
+      <tr>
+        <td>{{ r.ano }}</td>
+        <td>{{ r.categoria }}</td>
+        <td class="num">R$ {{ "{:,.2f}".format(r.valor_rs).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+        <td class="small">{{ r.descricao or "" }}</td>
+        <td class="small">{{ r.fonte or "" }}</td>
+        <td>
+          <form method="post" action="/admin/custos/excluir" style="display:inline;">
+            <input type="hidden" name="tipo" value="chi">
+            <input type="hidden" name="ano" value="{{ r.ano }}">
+            <input type="hidden" name="categoria" value="{{ r.categoria }}">
+            <button type="submit" class="small" onclick="return confirm('Excluir?')">excluir</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">Sem categorias χ cadastradas — o cálculo usa a tabela legada chi_custos_lgaf (se houver).</p>
+  {% endif %}
+  <form method="post" action="/admin/custos" class="form inline">
+    <input type="hidden" name="tipo" value="chi">
+    <label>Ano <input type="number" name="ano" value="2024" required></label>
+    <label>Categoria
+      <select name="categoria">
+        {% for c in chi_categorias %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Valor (R$) <input type="number" step="0.01" name="valor_rs" required></label>
+    <label>Descrição <input type="text" name="descricao"></label>
+    <label>Fonte <input type="text" name="fonte"></label>
+    <button type="submit">Adicionar/atualizar χ</button>
+  </form>
+
+  <h2>β — Receitas LGAF por categoria</h2>
+  <p class="small">Mesma lógica: total anual é rateado por 10 eventos, a menos que o operador sobrescreva no formulário do evento.</p>
+  {% if beta_rows %}
+  <table class="tbl">
+    <thead><tr><th>Ano</th><th>Categoria</th><th class="num">Valor (R$)</th><th>Descrição</th><th>Fonte</th><th></th></tr></thead>
+    <tbody>
+    {% for r in beta_rows %}
+      <tr>
+        <td>{{ r.ano }}</td>
+        <td>{{ r.categoria }}</td>
+        <td class="num">R$ {{ "{:,.2f}".format(r.valor_rs).replace(",", "X").replace(".", ",").replace("X", ".") }}</td>
+        <td class="small">{{ r.descricao or "" }}</td>
+        <td class="small">{{ r.fonte or "" }}</td>
+        <td>
+          <form method="post" action="/admin/custos/excluir" style="display:inline;">
+            <input type="hidden" name="tipo" value="beta">
+            <input type="hidden" name="ano" value="{{ r.ano }}">
+            <input type="hidden" name="categoria" value="{{ r.categoria }}">
+            <button type="submit" class="small" onclick="return confirm('Excluir?')">excluir</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty">Sem categorias β cadastradas.</p>
+  {% endif %}
+  <form method="post" action="/admin/custos" class="form inline">
+    <input type="hidden" name="tipo" value="beta">
+    <label>Ano <input type="number" name="ano" value="2024" required></label>
+    <label>Categoria
+      <select name="categoria">
+        {% for c in beta_categorias %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Valor (R$) <input type="number" step="0.01" name="valor_rs" required></label>
+    <label>Descrição <input type="text" name="descricao"></label>
+    <label>Fonte <input type="text" name="fonte"></label>
+    <button type="submit">Adicionar/atualizar β</button>
+  </form>
+
   <h2>Registrar atualização manual</h2>
   <form method="post" action="/admin/fontes/upload" class="form inline">
     <label>Fonte

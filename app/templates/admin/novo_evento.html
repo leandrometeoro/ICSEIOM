@@ -26,8 +26,18 @@
           <div id="sugestao-info" style="font-size:.82rem; color:#555; margin-top:.3rem;"></div>
         </div>
         <label>Descrição <textarea name="descricao" rows="3"></textarea></label>
-        <button type="submit">Calcular e registrar</button>
+        <details style="margin:.4rem 0 .8rem;">
+          <summary style="cursor:pointer; font-weight:600; color:#065A82;">Sobrescrever β/χ neste evento (opcional)</summary>
+          <p class="small" style="margin:.4rem 0;">Vazios: usa os totais anuais do banco divididos pelo rateio de 10 eventos/ano. Preenchidos: valor entra direto no evento, ignorando rateio.</p>
+          <label>Sobrescrever β total (R$) <input type="number" step="0.01" name="beta_override_rs" placeholder="usa banco"></label>
+          <label>Sobrescrever χ total (R$) <input type="number" step="0.01" name="chi_override_rs" placeholder="usa banco"></label>
+        </details>
+        <div style="display:flex; gap:.6rem; flex-wrap:wrap;">
+          <button type="button" id="btn-simular" style="background:#1C7293;">Simular</button>
+          <button type="submit">Calcular e registrar</button>
+        </div>
       </form>
+      <div id="preview" style="margin-top:1rem;"></div>
     </div>
     <div>
       <div id="pick-map"></div>
@@ -75,6 +85,54 @@
         inpMulta.value = d.valor_rs.toFixed(2);
         infoSug.textContent = `Estimativa α̂₁: R$ ${d.valor_rs.toLocaleString('pt-BR', {maximumFractionDigits: 0})} (média geométrica dos municípios no raio, ponderada por fração de impacto).`;
       }).catch(()=>{ infoSug.textContent = 'Erro ao buscar sugestão.'; });
+  });
+  const btnSim = document.getElementById('btn-simular');
+  const preview = document.getElementById('preview');
+  const fmtBR = v => 'R$ ' + (v || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  btnSim.addEventListener('click', () => {
+    const data = document.querySelector('[name=data_evento]').value;
+    const lat = parseFloat(document.getElementById('lat').value);
+    const lon = parseFloat(document.getElementById('lon').value);
+    const raio = parseFloat(document.getElementById('raio').value);
+    const pol = selPol.value === 'sim';
+    const multa = inpMulta.value.trim() || null;
+    const betaOv = (document.querySelector('[name=beta_override_rs]') || {}).value || null;
+    const chiOv = (document.querySelector('[name=chi_override_rs]') || {}).value || null;
+    if(!data || isNaN(lat) || isNaN(lon) || isNaN(raio)){
+      preview.innerHTML = '<div class="empty">Preencha data, lat, lon e raio.</div>';
+      return;
+    }
+    preview.innerHTML = '<div class="empty">Calculando…</div>';
+    fetch('/api/preview-evento', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        data_evento: data, lat: lat, lon: lon, raio_km: raio,
+        foi_poluente: pol, valor_multa_rs: multa,
+        beta_override_rs: betaOv, chi_override_rs: chiOv,
+      })
+    }).then(r => r.json()).then(d => {
+      if(d.detail){ preview.innerHTML = '<div class="empty">Erro: '+d.detail+'</div>'; return; }
+      const munis = (d.municipios || []).map(m =>
+        '<tr><td>'+m.nome+'/'+m.uf+'</td><td class="num">'+m.dist_km.toFixed(1)+' km</td><td class="num">'+(m.frac*100).toFixed(1)+'%</td></tr>').join('');
+      preview.innerHTML =
+        '<div class="callout" style="background:#f4f7fa; border-left:3px solid #1C7293; padding:.8rem 1rem; border-radius:4px;">' +
+        '<h3 style="margin:0 0 .5rem;">Simulação (não persistida) — safra '+d.ano_safra+'</h3>' +
+        '<table class="tbl" style="font-size:.88rem;">' +
+        '<tr><td>α₁ multa</td><td class="num">'+fmtBR(d.alpha1_rs)+'</td></tr>' +
+        '<tr><td>α₂ pesca</td><td class="num">'+fmtBR(d.alpha2_rs)+'</td></tr>' +
+        '<tr><td>α₃ turismo</td><td class="num">'+fmtBR(d.alpha3_rs)+'</td></tr>' +
+        '<tr><td>α₄ saúde</td><td class="num">'+fmtBR(d.alpha4_rs)+'</td></tr>' +
+        '<tr><td>α₅ ecossistemas</td><td class="num">'+fmtBR(d.alpha5_rs)+'</td></tr>' +
+        '<tr><td>β receitas (evento)</td><td class="num">'+fmtBR(d.beta_rs)+'</td></tr>' +
+        '<tr><td>χ custos (evento)</td><td class="num">−'+fmtBR(d.chi_rs)+'</td></tr>' +
+        '<tr><td>k aplicado</td><td class="num">'+d.k.toFixed(2)+'</td></tr>' +
+        '<tr style="font-weight:bold; background:#e8eef3;"><td>ICSEIOM</td><td class="num">'+fmtBR(d.icseiom_rs)+'</td></tr>' +
+        '</table>' +
+        (munis ? '<h4 style="margin:.8rem 0 .3rem;">Municípios afetados ('+d.municipios.length+')</h4>' +
+          '<table class="tbl" style="font-size:.82rem;"><thead><tr><th>Município</th><th>Distância</th><th>Fração</th></tr></thead><tbody>'+munis+'</tbody></table>'
+          : '<p class="empty">Nenhum município no raio.</p>') +
+        '</div>';
+    }).catch(e => { preview.innerHTML = '<div class="empty">Erro ao simular.</div>'; });
   });
   m.on('click', e => update(e.latlng.lat, e.latlng.lng));
   document.getElementById('raio').addEventListener('input', () => {

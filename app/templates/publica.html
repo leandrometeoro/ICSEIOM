@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}ICSEIOM{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Índice de Custo Socioambiental Evitado por Incidentes com Óleo no Mar</h1>
+  <p>Valor social potencial preservado pela atuação preventiva e forense da Laboratório de Geoquímica Ambiental Forense (LGAF) do IEAPM.</p>
+  <div class="kpis">
+    <div class="kpi"><span class="v">{{ n_eventos }}</span><span class="l">eventos registrados</span></div>
+    <div class="kpi"><span class="v">R$ {{ "{:,.0f}".format(total_acum).replace(",", ".") }}</span><span class="l">ICSEIOM acumulado (toda série)</span></div>
+    <div class="kpi"><span class="v">R$ {{ "{:,.0f}".format(setores.total_rs).replace(",", ".") }}</span><span class="l">atribuído à LGAF em {{ ano }}</span></div>
+  </div>
+</section>
+
+<section class="page">
+  <h2>Lucro social por setor — {{ ano }}</h2>
+  <p>Decomposição do valor evitado, já multiplicado pelo share LGAF (k = 0,30, placeholder). Setores correspondem aos termos α₁..α₅ da equação do ICSEIOM.</p>
+
+  {% set labels = {
+    'multa': ('α₁ Multa ambiental', '#21295C'),
+    'pesca': ('α₂ Pesca', '#065A82'),
+    'turismo': ('α₃ Turismo costeiro', '#1C7293'),
+    'saude': ('α₄ Saúde pública', '#9B6B1F'),
+    'ecossistemas': ('α₅ Ecossistemas', '#C8A13A')
+  } %}
+
+  <div class="grid-setores">
+    {% for chave, valor in setores.setores.items() %}
+    {% set label, cor = labels[chave] %}
+    <div class="card-setor" style="border-left:5px solid {{ cor }};">
+      <div class="card-label">{{ label }}</div>
+      <div class="card-valor">R$ {{ "{:,.2f}".format(valor).replace(",", "X").replace(".", ",").replace("X", ".") }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <p class="small">
+    <a href="/historico">Ver histórico completo de eventos</a> ·
+    <a href="/metodologia">Metodologia</a> ·
+    <a href="/login">Login do operador</a>
+  </p>
+</section>
+
+<style>
+.grid-setores { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:.8rem; margin:1rem 0; }
+.card-setor { background:#f4f7fa; padding:.9rem 1rem; border-radius:4px; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+.card-setor .card-label { font-size:.85rem; color:#555; margin-bottom:.3rem; }
+.card-setor .card-valor { font-size:1.15rem; font-weight:600; color:#21295C; }
+</style>
+{% endblock %}

@@ -29,6 +29,10 @@ class ResultadoICSEIOM:
     chi_rs: float
     k: float
     icseiom_rs: float
+    beta_cat: dict
+    chi_cat: dict
+    beta_override: bool
+    chi_override: bool
 
 
 def calcular_icseiom(
@@ -38,6 +42,8 @@ def calcular_icseiom(
     raio_km: float,
     foi_poluente: bool = True,
     valor_multa_rs: float | None = None,
+    beta_override_rs: float | None = None,
+    chi_override_rs: float | None = None,
 ) -> ResultadoICSEIOM:
     con = get_conn()
     cur = con.cursor()
@@ -61,7 +67,12 @@ def calcular_icseiom(
 
     if not afetados:
         con.close()
-        return ResultadoICSEIOM(None, [], ano_safra, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        return ResultadoICSEIOM(
+            None, [], ano_safra, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            beta_cat={}, chi_cat={},
+            beta_override=beta_override_rs is not None,
+            chi_override=chi_override_rs is not None,
+        )
 
     def soma(tabela, col):
         # Cada alpha tem disponibilidade temporal diferente (alpha1 ate 2024,
@@ -117,15 +128,29 @@ def calcular_icseiom(
     a4 = soma("alpha4_saude", "custo_rs") if foi_poluente else 0.0
     a5 = soma("alpha5_ecossistemas", "valor_teeb_rs")
 
-    beta_row = cur.execute(
-        "SELECT valor_rs FROM beta_receitas_lgaf WHERE ano=?", (ano_safra,)
-    ).fetchone()
-    beta = beta_row[0] if beta_row else 0.0
+    # beta/chi: prioriza tabelas por categoria (ano, categoria, valor_rs);
+    # se nao houver categorias, cai no agregado anual legado.
+    beta_cat = {r["categoria"]: r["valor_rs"] for r in cur.execute(
+        "SELECT categoria, valor_rs FROM beta_receitas_cat WHERE ano=?", (ano_safra,)
+    ).fetchall()}
+    if beta_cat:
+        beta = sum(beta_cat.values())
+    else:
+        beta_row = cur.execute(
+            "SELECT valor_rs FROM beta_receitas_lgaf WHERE ano=?", (ano_safra,)
+        ).fetchone()
+        beta = beta_row[0] if beta_row else 0.0
 
-    chi_row = cur.execute(
-        "SELECT valor_rs FROM chi_custos_lgaf WHERE ano=?", (ano_safra,)
-    ).fetchone()
-    chi = chi_row[0] if chi_row else 0.0
+    chi_cat = {r["categoria"]: r["valor_rs"] for r in cur.execute(
+        "SELECT categoria, valor_rs FROM chi_custos_cat WHERE ano=?", (ano_safra,)
+    ).fetchall()}
+    if chi_cat:
+        chi = sum(chi_cat.values())
+    else:
+        chi_row = cur.execute(
+            "SELECT valor_rs FROM chi_custos_lgaf WHERE ano=?", (ano_safra,)
+        ).fetchone()
+        chi = chi_row[0] if chi_row else 0.0
 
     # k = share LGAF no merito coletivo do lucro social evitado. O ICSEIOM nao
     # e 100% atribuivel a LGAF: outros atores (IBAMA, ICMBio, Marinha, Defesa
@@ -135,8 +160,14 @@ def calcular_icseiom(
     k = k_row[0] if k_row else 0.30
 
     rateio = 10
-    beta_ev = beta / rateio
-    chi_ev = chi / rateio
+    if beta_override_rs is not None:
+        beta_ev = float(beta_override_rs)
+    else:
+        beta_ev = beta / rateio
+    if chi_override_rs is not None:
+        chi_ev = float(chi_override_rs)
+    else:
+        chi_ev = chi / rateio
 
     icseiom = k * (a1 + a2 + a3 + a4 + a5) + beta_ev - chi_ev
 
@@ -157,6 +188,10 @@ def calcular_icseiom(
         chi_rs=round(chi_ev, 2),
         k=k,
         icseiom_rs=round(icseiom, 2),
+        beta_cat={c: round(v, 2) for c, v in beta_cat.items()},
+        chi_cat={c: round(v, 2) for c, v in chi_cat.items()},
+        beta_override=beta_override_rs is not None,
+        chi_override=chi_override_rs is not None,
     )
 
 
@@ -192,19 +227,23 @@ def registrar_evento(
     descricao: str = "",
     valor_multa_rs: float | None = None,
     multa_provisoria: bool = True,
+    beta_override_rs: float | None = None,
+    chi_override_rs: float | None = None,
 ) -> int:
     """Calcula o ICSEIOM, persiste em eventos/eventos_municipios/resultados e retorna id."""
     res = calcular_icseiom(
-        data_evento, lon, lat, raio_km, foi_poluente, valor_multa_rs
+        data_evento, lon, lat, raio_km, foi_poluente, valor_multa_rs,
+        beta_override_rs=beta_override_rs, chi_override_rs=chi_override_rs,
     )
     con = get_conn()
     cur = con.cursor()
     cur.execute(
         "INSERT INTO eventos (data_evento, lon, lat, raio_km, foi_poluente, "
-        "descricao, valor_multa_rs, multa_provisoria) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "descricao, valor_multa_rs, multa_provisoria, beta_override_rs, chi_override_rs) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (data_evento, lon, lat, raio_km, int(foi_poluente), descricao,
-         valor_multa_rs, int(multa_provisoria) if foi_poluente else 0),
+         valor_multa_rs, int(multa_provisoria) if foi_poluente else 0,
+         beta_override_rs, chi_override_rs),
     )
     id_evento = cur.lastrowid
     for m in res.municipios:
@@ -257,8 +296,8 @@ def set_alpha5_base(base: str) -> None:
     )
     # Reaplica em eventos ja persistidos: recalcula alpha5/icseiom de cada evento.
     eventos = cur.execute(
-        "SELECT id_evento, data_evento, lon, lat, raio_km, foi_poluente, valor_multa_rs "
-        "FROM eventos"
+        "SELECT id_evento, data_evento, lon, lat, raio_km, foi_poluente, "
+        "valor_multa_rs, beta_override_rs, chi_override_rs FROM eventos"
     ).fetchall()
     con.commit()
     con.close()
@@ -266,6 +305,8 @@ def set_alpha5_base(base: str) -> None:
         res = calcular_icseiom(
             ev["data_evento"], ev["lon"], ev["lat"], ev["raio_km"],
             bool(ev["foi_poluente"]), ev["valor_multa_rs"],
+            beta_override_rs=ev["beta_override_rs"],
+            chi_override_rs=ev["chi_override_rs"],
         )
         con = get_conn(); cur = con.cursor()
         cur.execute(
@@ -283,7 +324,8 @@ def atualizar_multa_evento(
     con = get_conn()
     cur = con.cursor()
     ev = cur.execute(
-        "SELECT data_evento, lon, lat, raio_km, foi_poluente FROM eventos "
+        "SELECT data_evento, lon, lat, raio_km, foi_poluente, "
+        "beta_override_rs, chi_override_rs FROM eventos "
         "WHERE id_evento=?", (id_evento,)
     ).fetchone()
     if ev is None:
@@ -301,6 +343,8 @@ def atualizar_multa_evento(
     res = calcular_icseiom(
         ev["data_evento"], ev["lon"], ev["lat"], ev["raio_km"], True,
         valor_multa_rs,
+        beta_override_rs=ev["beta_override_rs"],
+        chi_override_rs=ev["chi_override_rs"],
     )
     con = get_conn()
     cur = con.cursor()

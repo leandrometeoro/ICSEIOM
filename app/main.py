@@ -47,20 +47,15 @@ def render(request: Request, name: str, **extra):
 def home(request: Request):
     if current_user(request):
         return RedirectResponse("/admin/dataset", status_code=303)
-    return HTMLResponse(
-        "<!doctype html><meta charset=utf-8><title>ICSEIOM</title>"
-        "<style>body{font-family:system-ui;background:#0b1e2d;color:#e8eef3;"
-        "display:flex;min-height:100vh;align-items:center;justify-content:center;"
-        "margin:0;text-align:center;padding:2rem}"
-        "h1{color:#C8A13A;margin:0 0 .5rem}p{max-width:38rem;line-height:1.5}"
-        "a{color:#8FC1D4}</style>"
-        "<div><h1>ICSEIOM</h1>"
-        "<p>Sistema em construção. O resultado público do Índice de Custo "
-        "Socioambiental Evitado por Incidentes com Óleo no Mar será "
-        "apresentado aqui em breve.</p>"
-        "<p><a href='/historico'>histórico de eventos</a> · "
-        "<a href='/metodologia'>metodologia</a> · "
-        "<a href='/login'>login operador</a></p></div>"
+    from datetime import datetime
+    ano = datetime.utcnow().year
+    setores = api_icseiom_por_setor(ano=str(ano))
+    n_eventos = query_one("SELECT COUNT(*) c FROM eventos")["c"]
+    total_acum = query_one("SELECT COALESCE(SUM(icseiom_rs),0) s FROM resultados")["s"]
+    return render(
+        request, "publica.html",
+        setores=setores, ano=ano,
+        n_eventos=n_eventos, total_acum=total_acum,
     )
 
 
@@ -327,10 +322,22 @@ def metodologia(request: Request):
 def historico(request: Request):
     eventos = query_all(
         "SELECT e.id_evento, e.data_evento, e.lon, e.lat, e.raio_km, e.foi_poluente, "
-        "e.descricao, r.icseiom_rs, r.k_aplicado "
+        "e.descricao, r.icseiom_rs, r.k_aplicado, "
+        "r.alpha1_rs, r.alpha2_rs, r.alpha3_rs, r.alpha4_rs, r.alpha5_rs "
         "FROM eventos e LEFT JOIN resultados r ON r.id_evento = e.id_evento "
         "ORDER BY e.data_evento DESC, e.id_evento DESC"
     )
+    rotulos = {
+        "alpha1_rs": "α₁ multa",
+        "alpha2_rs": "α₂ pesca",
+        "alpha3_rs": "α₃ turismo",
+        "alpha4_rs": "α₄ saúde",
+        "alpha5_rs": "α₅ ecossistemas",
+    }
+    for e in eventos:
+        pares = [(k, e.get(k) or 0) for k in rotulos]
+        maior = max(pares, key=lambda p: p[1])
+        e["setor_dominante"] = rotulos[maior[0]] if maior[1] > 0 else "—"
     return render(request, "historico.html", eventos=eventos)
 
 
@@ -497,6 +504,44 @@ def api_fontes():
     return query_all("SELECT * FROM metadados_atualizacao ORDER BY fonte")
 
 
+@app.get("/api/icseiom-por-setor")
+def api_icseiom_por_setor(ano: str = "todos"):
+    """Agrega por setor (α₁..α₅) o valor atribuido à LGAF (× k_aplicado).
+
+    ano="todos" soma toda a serie; ano="YYYY" filtra por ano do evento.
+    Retorna totais por setor e por evento.
+    """
+    sql = (
+        "SELECT r.alpha1_rs, r.alpha2_rs, r.alpha3_rs, r.alpha4_rs, r.alpha5_rs, "
+        "r.k_aplicado, substr(e.data_evento,1,4) AS ano "
+        "FROM resultados r JOIN eventos e ON e.id_evento=r.id_evento"
+    )
+    params: tuple = ()
+    if ano != "todos":
+        try:
+            ano_int = int(ano)
+        except ValueError:
+            raise HTTPException(400, "ano invalido")
+        sql += " WHERE substr(e.data_evento,1,4)=?"
+        params = (str(ano_int),)
+    rows = query_all(sql, params)
+    setores = {"multa": 0.0, "pesca": 0.0, "turismo": 0.0, "saude": 0.0, "ecossistemas": 0.0}
+    for r in rows:
+        k = r["k_aplicado"] or 0
+        setores["multa"] += (r["alpha1_rs"] or 0) * k
+        setores["pesca"] += (r["alpha2_rs"] or 0) * k
+        setores["turismo"] += (r["alpha3_rs"] or 0) * k
+        setores["saude"] += (r["alpha4_rs"] or 0) * k
+        setores["ecossistemas"] += (r["alpha5_rs"] or 0) * k
+    total = sum(setores.values())
+    return {
+        "ano": ano,
+        "n_eventos": len(rows),
+        "total_rs": round(total, 2),
+        "setores": {k: round(v, 2) for k, v in setores.items()},
+    }
+
+
 # ────────────── Autenticação ──────────────
 
 @app.get("/login", response_class=HTMLResponse)
@@ -546,17 +591,26 @@ def novo_evento_submit(
     foi_poluente: str = Form("nao"),
     descricao: str = Form(""),
     valor_multa_rs: str = Form(""),
+    beta_override_rs: str = Form(""),
+    chi_override_rs: str = Form(""),
 ):
     poluente = foi_poluente == "sim"
-    multa_val: float | None = None
-    if valor_multa_rs.strip():
+
+    def _parse_rs(s: str) -> float | None:
+        if not s or not s.strip():
+            return None
         try:
-            multa_val = float(valor_multa_rs.replace(",", "."))
+            return float(s.replace(",", "."))
         except ValueError:
-            multa_val = None
+            return None
+
+    multa_val = _parse_rs(valor_multa_rs)
+    beta_ov = _parse_rs(beta_override_rs)
+    chi_ov = _parse_rs(chi_override_rs)
     id_ev = registrar_evento(
         data_evento, lon, lat, raio_km, poluente, descricao,
         valor_multa_rs=multa_val, multa_provisoria=True,
+        beta_override_rs=beta_ov, chi_override_rs=chi_ov,
     )
     return RedirectResponse(f"/evento/{id_ev}", status_code=303)
 
@@ -564,6 +618,46 @@ def novo_evento_submit(
 @app.get("/api/sugerir-multa")
 def api_sugerir_multa(lat: float, lon: float, raio_km: float):
     return {"valor_rs": sugerir_multa_rs(lon, lat, raio_km)}
+
+
+@app.post("/api/preview-evento")
+async def api_preview_evento(request: Request, user: str = Depends(require_admin)):
+    """Calcula ICSEIOM sem persistir. Reaproveita calcular_icseiom()."""
+    body = await request.json()
+    try:
+        data_evento = str(body["data_evento"])
+        lon = float(body["lon"])
+        lat = float(body["lat"])
+        raio_km = float(body["raio_km"])
+    except (KeyError, TypeError, ValueError):
+        raise HTTPException(400, "parametros obrigatorios: data_evento, lon, lat, raio_km")
+    poluente = bool(body.get("foi_poluente", False))
+    multa_val = body.get("valor_multa_rs")
+    if isinstance(multa_val, str):
+        multa_val = float(multa_val.replace(",", ".")) if multa_val.strip() else None
+    beta_override = body.get("beta_override_rs")
+    chi_override = body.get("chi_override_rs")
+    if isinstance(beta_override, str):
+        beta_override = float(beta_override.replace(",", ".")) if beta_override.strip() else None
+    if isinstance(chi_override, str):
+        chi_override = float(chi_override.replace(",", ".")) if chi_override.strip() else None
+    res = calcular_icseiom(
+        data_evento, lon, lat, raio_km, poluente, multa_val,
+        beta_override_rs=beta_override, chi_override_rs=chi_override,
+    )
+    return {
+        "ano_safra": res.ano_safra,
+        "alpha1_rs": res.alpha1_rs,
+        "alpha2_rs": res.alpha2_rs,
+        "alpha3_rs": res.alpha3_rs,
+        "alpha4_rs": res.alpha4_rs,
+        "alpha5_rs": res.alpha5_rs,
+        "beta_rs": res.beta_rs,
+        "chi_rs": res.chi_rs,
+        "k": res.k,
+        "icseiom_rs": res.icseiom_rs,
+        "municipios": res.municipios,
+    }
 
 
 @app.post("/admin/evento/{id_evento}/corrigir-multa")
@@ -579,11 +673,76 @@ def admin_corrigir_multa(
     return RedirectResponse(f"/evento/{id_evento}", status_code=303)
 
 
+CHI_CATEGORIAS = ["pessoal", "insumos", "fixos"]
+BETA_CATEGORIAS = ["convenios", "servicos", "outros"]
+
+
 @app.get("/admin/fontes", response_class=HTMLResponse)
 def admin_fontes(request: Request, user: str = Depends(require_admin)):
     fontes = query_all("SELECT * FROM metadados_atualizacao ORDER BY fonte")
-    return render(request, "admin/fontes.html", fontes=fontes,
-                  alpha5_base=get_alpha5_base())
+    chi_rows = query_all(
+        "SELECT ano, categoria, valor_rs, descricao, fonte "
+        "FROM chi_custos_cat ORDER BY ano DESC, categoria"
+    )
+    beta_rows = query_all(
+        "SELECT ano, categoria, valor_rs, descricao, fonte "
+        "FROM beta_receitas_cat ORDER BY ano DESC, categoria"
+    )
+    return render(
+        request, "admin/fontes.html",
+        fontes=fontes, alpha5_base=get_alpha5_base(),
+        chi_rows=chi_rows, beta_rows=beta_rows,
+        chi_categorias=CHI_CATEGORIAS, beta_categorias=BETA_CATEGORIAS,
+    )
+
+
+@app.post("/admin/custos")
+def admin_custos_upsert(
+    user: str = Depends(require_admin),
+    tipo: str = Form(...),
+    ano: int = Form(...),
+    categoria: str = Form(...),
+    valor_rs: float = Form(...),
+    descricao: str = Form(""),
+    fonte: str = Form(""),
+):
+    if tipo == "chi":
+        if categoria not in CHI_CATEGORIAS:
+            raise HTTPException(400, "categoria invalida para chi")
+        tabela = "chi_custos_cat"
+    elif tipo == "beta":
+        if categoria not in BETA_CATEGORIAS:
+            raise HTTPException(400, "categoria invalida para beta")
+        tabela = "beta_receitas_cat"
+    else:
+        raise HTTPException(400, "tipo deve ser chi ou beta")
+    con = get_conn()
+    con.execute(
+        f"INSERT INTO {tabela} (ano, categoria, valor_rs, descricao, fonte) "
+        "VALUES (?, ?, ?, ?, ?) ON CONFLICT(ano, categoria) DO UPDATE SET "
+        "valor_rs=excluded.valor_rs, descricao=excluded.descricao, fonte=excluded.fonte",
+        (ano, categoria, valor_rs, descricao, fonte),
+    )
+    con.commit()
+    con.close()
+    return RedirectResponse("/admin/fontes", status_code=303)
+
+
+@app.post("/admin/custos/excluir")
+def admin_custos_excluir(
+    user: str = Depends(require_admin),
+    tipo: str = Form(...),
+    ano: int = Form(...),
+    categoria: str = Form(...),
+):
+    tabela = "chi_custos_cat" if tipo == "chi" else "beta_receitas_cat"
+    con = get_conn()
+    con.execute(
+        f"DELETE FROM {tabela} WHERE ano=? AND categoria=?", (ano, categoria)
+    )
+    con.commit()
+    con.close()
+    return RedirectResponse("/admin/fontes", status_code=303)
 
 
 @app.post("/admin/alpha5-base")

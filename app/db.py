@@ -25,6 +25,30 @@ _MIGRATIONS = [
     # vizinho mais proximo. Populado via scripts/34_carregar_centroides_ibge.py.
     ("municipios_brasil", "lat_centro", "REAL"),
     ("municipios_brasil", "lon_centro", "REAL"),
+    # Override opcional por evento para beta/chi: se informado, substitui
+    # o valor rateado do ano. Vazio = comportamento legado (rateio=10).
+    ("eventos", "beta_override_rs", "REAL"),
+    ("eventos", "chi_override_rs", "REAL"),
+]
+
+# Tabelas criadas via CREATE TABLE IF NOT EXISTS em migracao.
+_CREATE_TABLES = [
+    """CREATE TABLE IF NOT EXISTS chi_custos_cat (
+        ano INTEGER NOT NULL,
+        categoria TEXT NOT NULL CHECK(categoria IN ('pessoal','insumos','fixos')),
+        valor_rs REAL NOT NULL DEFAULT 0,
+        descricao TEXT,
+        fonte TEXT,
+        PRIMARY KEY (ano, categoria)
+    )""",
+    """CREATE TABLE IF NOT EXISTS beta_receitas_cat (
+        ano INTEGER NOT NULL,
+        categoria TEXT NOT NULL CHECK(categoria IN ('convenios','servicos','outros')),
+        valor_rs REAL NOT NULL DEFAULT 0,
+        descricao TEXT,
+        fonte TEXT,
+        PRIMARY KEY (ano, categoria)
+    )""",
 ]
 _migrated = False
 
@@ -37,6 +61,8 @@ def _ensure_migrations(con: sqlite3.Connection) -> None:
         existing = {r[1] for r in con.execute(f"PRAGMA table_info({tabela})")}
         if coluna not in existing:
             con.execute(f"ALTER TABLE {tabela} ADD COLUMN {coluna} {tipo}")
+    for ddl in _CREATE_TABLES:
+        con.execute(ddl)
     con.commit()
     _migrated = True
 

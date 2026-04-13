@@ -7,7 +7,7 @@
   {% if eventos %}
   <table class="tbl">
     <thead>
-      <tr><th>ID</th><th>Data</th><th>Lat</th><th>Lon</th><th>Raio (km)</th><th>Poluente?</th><th>ICSEIOM (R$)</th><th></th></tr>
+      <tr><th>ID</th><th>Data</th><th>Lat</th><th>Lon</th><th>Raio (km)</th><th>Poluente?</th><th>Setor dominante</th><th>ICSEIOM (R$)</th><th></th></tr>
     </thead>
     <tbody>
       {% for e in eventos %}
@@ -18,6 +18,7 @@
         <td>{{ "%.3f"|format(e.lon) }}</td>
         <td>{{ e.raio_km }}</td>
         <td>{{ "sim" if e.foi_poluente else "não" }}</td>
+        <td class="small">{{ e.setor_dominante }}</td>
         <td class="num">{% if e.icseiom_rs %}R$ {{ "{:,.2f}".format(e.icseiom_rs).replace(",", "X").replace(".", ",").replace("X", ".") }}{% else %}—{% endif %}</td>
         <td><a href="/evento/{{ e.id_evento }}">ver</a></td>
       </tr>
